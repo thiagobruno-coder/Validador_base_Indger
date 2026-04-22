@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataGovernance Pro | Auditoria ANEEL</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0B1120',
+                            panel: '#1E293B',
+                            border: '#334155'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617; /* slate-950 */
+            color: #e2e8f0;
+        }
+
+        h1, h2, h3, h4, h5, .font-heading {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        .file-drop-area {
+            border: 2px dashed #475569;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .file-drop-area:hover, .file-drop-area.dragover {
+            border-color: #3b82f6;
+            background-color: rgba(59, 130, 246, 0.05);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+        .nav-item.active {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, transparent 100%);
+            border-left: 3px solid #3b82f6;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px rgba(96, 165, 250, 0.4);
+        }
+
+        /* Tabela */
+        .data-table th {
+            position: sticky; top: 0; z-index: 10;
+        }
+        
+        .row-critical { background-color: rgba(239, 68, 68, 0.1); }
+        .row-critical:hover { background-color: rgba(239, 68, 68, 0.15); }
+        .cell-critical {
+            color: #f87171 !important;
+            font-weight: 700;
+            background-color: rgba(153, 27, 27, 0.3) !important;
+            border: 1px solid rgba(248, 113, 113, 0.2);
+            text-shadow: 0 0 5px rgba(248,113,113,0.3);
+        }
+
+        .row-warning { background-color: rgba(245, 158, 11, 0.05); }
+        .row-warning:hover { background-color: rgba(245, 158, 11, 0.1); }
+        .cell-warning {
+            color: #fbbf24 !important;
+            font-weight: 700;
+            background-color: rgba(146, 64, 14, 0.3) !important;
+            border: 1px solid rgba(251, 191, 36, 0.2);
+        }
+        
+        .row-ok:hover { background-color: rgba(30, 41, 59, 0.4); }
+
+        .tooltip { position: relative; }
+        .tooltip:hover::after {
+            content: attr(data-error);
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            color: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+            z-index: 50;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Progress loader */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top: 3px solid #3b82f6;
+            width: 30px;
+            height: 30px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- Header -->
+    <header class="h-16 border-b border-slate-800 bg-[#060B14] flex items-center justify-between px-6 z-20 shrink-0">
+        <div class="flex items-center gap-4">
+            <div class="p-2 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-[0_0_15px_rgba(79,70,229,0.3)]">
+                <i class="fas fa-layer-group text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-heading font-extrabold tracking-tight text-white glow-text">DATA GOVERNANCE <span class="text-blue-500">PRO</span></h1>
+                <div class="flex items-center gap-2 text-[10px] text-slate-400 font-medium uppercase tracking-widest leading-none mt-0.5">
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse"></span> INDGER 2 Multiarquivo</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <button id="btnExportAll" class="hidden bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-colors px-4 py-2 rounded-lg text-xs font-bold shadow flex items-center gap-2 group">
+               <i class="fas fa-download text-blue-400 group-hover:text-blue-300"></i> Exportar Relatório Master
+            </button>
+            <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
+                <i class="fas fa-user-shield text-slate-400 text-xs"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- App Body -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside id="sidebarPanel" class="w-64 border-r border-slate-800 bg-[#0B1120] flex flex-col hidden shrink-0 z-10 transition-transform duration-300">
+            <div class="p-5 border-b border-slate-800/80 bg-slate-800/20">
+                <h3 class="text-xs font-heading font-bold text-slate-400 uppercase tracking-widest mb-1">Status Global</h3>
+                <div class="flex items-end gap-2 mt-2">
+                    <span id="globalScoreText" class="text-2xl font-bold font-heading text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">100%</span>
+                    <span class="text-[10px] text-slate-500 mb-1 font-medium uppercase">Quality Score</span>
+                </div>
+            </div>
+            
+            <div class="py-4 flex-1 overflow-y-auto custom-scrollbar">
+                <div class="px-5 mb-2">
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bases Importadas</h4>
+                </div>
+                <!-- Nav Itens renderizados dinamicamente -->
+                <ul id="navList" class="space-y-0.5">
+                    <!-- exemplo
+                    <li class="nav-item cursor-pointer px-5 py-3 border-l-3 border-transparent hover:bg-slate-800/50 flex flex-col gap-1">
+                        ...
+                    </li>
+                    -->
+                </ul>
+            </div>
+            
+            <div class="p-4 border-t border-slate-800 bg-[#060B14]">
+                <button onclick="location.reload()" class="w-full py-2.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-sync-alt"></i> Novo Lote
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto custom-scrollbar bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-opacity-20 relative">
+            <div class="absolute inset-0 bg-gradient-to-b from-[#020617] to-[#0A0F1C] -z-10"></div>
+            
+            <!-- Zona de Drop Gigante Inicial -->
+            <div id="uploadView" class="h-full flex flex-col items-center justify-center p-8">
+                <div class="max-w-2xl w-full">
+                    <div class="text-center mb-8">
+                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-900/20 border border-blue-500/30 mb-6 shadow-[0_0_30px_rgba(59,130,246,0.15)]">
+                            <i class="fas fa-database text-4xl text-blue-400"></i>
+                        </div>
+                        <h2 class="text-3xl font-heading font-extrabold text-white mb-2 glowing-text">Suíte Multiarquivos ANEEL</h2>
+                        <p class="text-slate-400 text-sm">Arraste seus 5 relatórios CSV gerados para a área abaixo.<br/>O processador em Lote fará o roteamento de regras automaticamente.</p>
+                    </div>
+
+                    <label for="multiFileInput" id="dropArea" class="file-drop-area flex flex-col items-center justify-center w-full h-64 rounded-2xl cursor-pointer group relative overflow-hidden bg-slate-900/50 glass-panel">
+                        <i class="fas fa-cloud-upload-alt text-5xl text-slate-500 group-hover:text-blue-400 mb-4 transition-colors duration-300 group-hover:scale-110 transform"></i>
+                        <p class="text-sm font-bold text-slate-300 uppercase tracking-widest mb-1 text-center font-heading">
+                            Solte os arquivos CSV aqui
+                        </p>
+                        <p class="text-[11px] text-slate-500 uppercase tracking-widest text-center">
+                            COMERCIAL, SERVICOS, TEC_AL, TEC_SUB e TEC_LD
+                        </p>
+                        <input type="file" id="multiFileInput" class="hidden" accept=".csv" multiple />
+                    </label>
+                    <div id="loadingIndicator" class="hidden flex flex-col items-center justify-center mt-6">
+                        <div class="loader mb-3"></div>
+                        <p class="text-xs text-blue-400 font-mono animate-pulse">Processando dados e ativando auditores regulatórios...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View da Base Ativa (Painel de Resultados) -->
+            <div id="dashboardView" class="hidden h-full flex flex-col">
+                <div class="p-6 shrink-0 border-b border-slate-800/50 glass-panel sticky top-0 z-30">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 id="activeBaseTitle" class="text-2xl font-heading font-extrabold text-white flex items-center gap-3">
+                                TEC_AL <span class="px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 text-[10px] font-mono border border-blue-500/30 uppercase tracking-widest">Base Ativa</span>
+                            </h2>
+                            <p class="text-[11px] text-slate-400 font-mono mt-1">Regras aplicadas para verificação de erro crítico ANEEL.</p>
+                        </div>
+                        <div class="text-right">
+                           <div id="activeScore" class="text-3xl font-heading font-black text-emerald-400">100%</div>
+                           <div class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Saúde da Tabela</div>
+                        </div>
+                    </div>
+
+                    <!-- Mini KPIs Internos -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fas fa-list mr-1"></i> Linhas Analisadas</p>
+                            <p id="kpiRows" class="text-xl font-heading font-bold text-white">0</p>
+                        </div>
+                        <div class="bg-red-900/10 border border-red-500/20 rounded-xl p-4">
+                            <p class="text-[10px] font-bold text-red-400/80 uppercase tracking-wider mb-1"><i class="fas fa-times-circle mr-1"></i> Erros Críticos (Grave)</p>
+                            <p id="kpiCritical" class="text-xl font-heading font-bold text-red-400">0</p>
+                        </div>
+                        <div class="bg-amber-900/10 border border-amber-500/20 rounded-xl p-4">
+                            <p class="text-[10px] font-bold text-amber-400/80 uppercase tracking-wider mb-1"><i class="fas fa-exclamation-triangle mr-1"></i> Avisos (Não Crítico)</p>
+                            <p id="kpiWarning" class="text-xl font-heading font-bold text-amber-400">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-auto p-6 space-y-6">
+                    <!-- Tabela de Inconsistências Restrita a base ativa -->
+                    <div class="glass-panel border border-slate-700/50 rounded-xl overflow-hidden shadow-xl">
+                        <div class="bg-slate-800/80 px-4 py-3 flex items-center justify-between border-b border-slate-700/80">
+                            <h3 class="text-xs font-heading font-bold text-slate-300 uppercase tracking-widest">
+                                <i class="fas fa-clipboard-list text-blue-400 mr-2"></i> Relatório de Avaliação
+                            </h3>
+                        </div>
+                        
+                        <div id="noErrorsDivActive" class="hidden p-8 text-center bg-slate-800/30">
+                            <i class="fas fa-shield-check text-4xl text-emerald-500/60 mb-3 block"></i>
+                            <p class="font-heading font-bold text-emerald-400 text-sm">Tabela validada com perfeição. Nenhuma inconsistência encontrada.</p>
+                        </div>
+
+                        <div id="errorsContainerActive" class="max-h-[300px] overflow-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse text-[11px]">
+                                <thead class="bg-slate-800/80 text-slate-400 border-b border-slate-700 sticky top-0 z-20">
+                                    <tr>
+                                        <th class="px-4 py-2 font-semibold uppercase tracking-wider w-16 text-center">Nº Linha</th>
+                                        <th class="px-4 py-2 font-semibold uppercase tracking-wider w-24 text-center">Gravidade</th>
+                                        <th class="px-4 py-2 font-semibold uppercase tracking-wider w-32">Campo ANEEL</th>
+                                        <th class="px-4 py-2 font-semibold uppercase tracking-wider">Problema Analisado (Erro/Aviso)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="errorListItemsActive" class="divide-y divide-slate-700/50">
+                                    <!-- Itens da tabela -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tabela Completa Bruta da Base Ativa -->
+                    <div class="glass-panel border border-slate-700/50 rounded-xl overflow-hidden shadow-xl">
+                        <div class="bg-slate-800/80 px-4 py-3 border-b border-slate-700/80">
+                             <h3 class="text-xs font-heading font-bold text-slate-300 uppercase tracking-widest">
+                                <i class="fas fa-table text-blue-400 mr-2"></i> Visualização Espelho (Dados Extraídos)
+                            </h3>
+                        </div>
+                        <div class="max-h-[600px] overflow-auto custom-scrollbar data-table">
+                            <table class="w-full text-left border-collapse min-w-[2000px] text-[11px] font-mono">
+                                <thead class="bg-slate-800/90 text-slate-300 border-b border-slate-700">
+                                    <tr id="tableHeaderRaw"></tr>
+                                </thead>
+                                <tbody id="tableBodyRaw" class="divide-y divide-slate-700/30 text-slate-300">
+                                    <!-- Celulas da tabela -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+    <script>
+        /**
+         * Global State & Engine Regulatória
+         */
+        const globalDataCenter = {
+            files: {},  // Map { 'COMERCIAL': { filename, type, rows[], cols[], errors[], metrics{} } }
+            activeTab: null
+        };
+
+        const getVal = (v) => {
+            if (v === null || v === undefined || String(v).trim() === "") return 0;
+            let n = parseFloat(String(v).replace(/\./g, '').replace(',', '.'));
+            return isNaN(n) ? 0 : n;
+        };
+        const isEmpty = (v) => (!v || String(v).trim() === '');
+
+        // Validadores Basicos Compartilhados
+        const baseValidator = {
+            cnpj: (v) => {
+                if (isEmpty(v)) return { ok: false, type: 'CRITICO', msg: "ERRO_CNPJ_VAZIO", desc: "CNPJ não pode estar vazio." };
+                const clean = String(v).replace(/\D/g, '');
+                if (clean.length !== 14) return { ok: false, type: 'CRITICO', msg: "ERRO_CNPJ_TAMANHO", desc: "CNPJ deve conter exatamente 14 dígitos numéricos." };
+                return { ok: true };
+            },
+            mes: (v) => {
+                if(isEmpty(v)) return { ok: true }; 
+                const m = parseInt(getVal(v));
+                if (m < 1 || m > 12) return { ok: false, type: 'CRITICO', msg: "ERRO_MES_FAIXA", desc: `Mês informado "${v}" incorreto. Limites [1-12].` };
+                return { ok: true };
+            },
+            ano: (v) => {
+                if(isEmpty(v)) return { ok: true }; 
+                const y = parseInt(getVal(v));
+                if (y < 1950 || y > 2050) return { ok: false, type: 'CRITICO', msg: "ERRO_ANO_FAIXA", desc: `Ano informado "${v}" incorreto. Limites [1950-2050].` };
+                return { ok: true };
+            }
+        };
+
+        /**
+         * The Rules Processor
+         * Return array of objects => { col, type: 'CRITICO'|'NAO_CRITICO', msg, desc }
+         */
+        function solveRowErrors(row, baseType, cols) {
+            let rowErrors = [];
+            const addErr = (col, type, msg, desc) => rowErrors.push({ col, type, msg, desc });
+            
+            if (baseType === 'COMERCIAL') {
+                if (!baseValidator.cnpj(row['com_001'])?.ok) addErr('com_001', 'CRITICO', 'CNPJ_INV', baseValidator.cnpj(row['com_001'])?.desc);
+                if (!baseValidator.mes(row['com_003'])?.ok) addErr('com_003', 'CRITICO', 'MES_INV', baseValidator.mes(row['com_003'])?.desc);
+                if (!baseValidator.ano(row['com_004'])?.ok) addErr('com_004', 'CRITICO', 'ANO_INV', baseValidator.ano(row['com_004'])?.desc);
+                
+                let com5 = getVal(row['com_005']), com6 = getVal(row['com_006']), com7 = getVal(row['com_007']);
+                if (com5 < com6) addErr('com_005', 'CRITICO', 'COM_R1', `Unid. ativas (${com5}) menor que ativas faturadas (${com6}). Inválido.`);
+                
+                if (com6 > 0) {
+                    let diff = com7 / com6;
+                    if (diff > 1.05 || diff < 0.95) addErr('com_007', 'NAO_CRITICO', 'COM_R2', `Alerta! Faturas emitidas (${com7}) possui variação superior a 5% em relação às ativas faturadas (${com6}).`);
+                }
+                
+                let c8 = getVal(row['com_008']), c25 = getVal(row['com_025']), c26 = getVal(row['com_026']);
+                if (com7 !== (c8 + c25 + c26)) addErr('com_007', 'CRITICO', 'COM_R3', `O somatório de faturas c/ leitura, s/ leitura e autoleitura (${c8+c25+c26}) difere do total (${com7}).`);
+
+                let sumSL = ['com_009','com_010','com_011','com_012','com_013','com_014'].reduce((a,b)=>a+getVal(row[b]),0);
+                if (c8 < sumSL) addErr('com_008', 'CRITICO', 'COM_R4', `Com 008 (faturas sem leitura) não cobre o sumário detalhado por motivo.`);
+                
+                let sumE = ['com_012','com_023','com_024'].reduce((a,b)=>a+getVal(row[b]),0);
+                if (c8 < sumE) addErr('com_008', 'CRITICO', 'COM_R5', `Com 008 não cobre somatório do faturamento estimado (012, 023, 024).`);
+                
+                let c16 = getVal(row['com_016']), c17 = getVal(row['com_017']), c21 = getVal(row['com_021']), c22 = getVal(row['com_022']);
+                if(c16 !== (c17 + c21 + c22)) addErr('com_016', 'CRITICO', 'COM_R6', `Com 016 deve ser soma exata dos motivos (${c17+c21+c22}).`);
+                
+                let sumD = ['com_018','com_019','com_020'].reduce((a,b)=>a+getVal(row[b]),0);
+                if(c17 < sumD) addErr('com_017', 'CRITICO', 'COM_R7', `Acerto por faturamento incorreto (com17) < somatório de devoluções detalhadas.`);
+            } 
+            else if (baseType === 'SERVICOS') {
+                if (!baseValidator.cnpj(row['serv_001'])?.ok) addErr('serv_001', 'CRITICO', 'CNPJ_INV', baseValidator.cnpj(row['serv_001'])?.desc);
+                if (!baseValidator.mes(row['serv_003'])?.ok) addErr('serv_003', 'CRITICO', 'MES_INV', baseValidator.mes(row['serv_003'])?.desc);
+                
+                let s6 = getVal(row['serv_006']), s8 = getVal(row['serv_008']);
+                if(s6 < s8) addErr('serv_006', 'CRITICO', 'SRV_R1', `Serviços realizados (${s6}) deve ser >= com descumprimento de prazo (${s8}).`);
+                
+                let s11 = getVal(row['serv_011']), s12 = getVal(row['serv_012']), s13 = getVal(row['serv_013']);
+                if(s11 < (s12 + s13)) addErr('serv_011', 'CRITICO', 'SRV_R2', `Serviços não realizados (${s11}) deve ser >= serviços suspensos e com descumprimento pendente.`);
+            }
+            else { // Bases Técnicas TEC_AL, TEC_SUB, TEC_LD
+                let px = baseType.replace('_', '').toLowerCase() + "_"; 
+                if (!baseValidator.cnpj(row[px+'001'])?.ok) addErr(px+'001', 'CRITICO', 'CNPJ_INV', baseValidator.cnpj(row[px+'001'])?.desc);
+                
+                let c2 = getVal(row[px+'002']);
+                if(isEmpty(row[px+'002']) || c2 < 964 || c2 > 30000) addErr(px+'002', 'CRITICO', 'TEC_R1', `ID Conjunto fora de range (964-30000) ou vazio.`);
+                
+                let c5 = row[px+'005'];
+                if(getVal(c5) === 0 && !isEmpty(c5)) addErr(px+'005', 'CRITICO', 'TEC_R2', `ID Equipamento não pode ser '0'. Deixe vazio.`);
+                if(isEmpty(c5)) addErr(px+'005', 'NAO_CRITICO', 'TEC_R3', `Sem equipamento linkado. Permitido se não aplicável.`);
+                
+                let c6 = row[px+'006'];
+                if(getVal(c6) === 0 || isEmpty(c6)) addErr(px+'006', 'NAO_CRITICO', 'TEC_R4', `Qtd Consumidores zerada/vazia. Indicativo de alerta.`);
+                let c7 = row[px+'007'];
+                if(getVal(c7) === 0 || isEmpty(c7)) addErr(px+'007', 'NAO_CRITICO', 'TEC_R5', `Sem histórico de reclamações.`);
+
+                [8, 10, 12].forEach(n => {
+                    let k = px + String(n).padStart(3, '0');
+                    if(row[k] && !isEmpty(row[k]) && !baseValidator.mes(row[k])?.ok) addErr(k, 'CRITICO', 'MES_OUT', `Mês incorreto.`);
+                });
+                [9, 11, 13].forEach(n => {
+                    let k = px + String(n).padStart(3, '0');
+                    if(row[k] && !isEmpty(row[k]) && !baseValidator.ano(row[k])?.ok) addErr(k, 'CRITICO', 'ANO_OUT', `Ano incorreto (deve ser 1950 a 2050).`);
+                });
+                
+                let c14 = row[px+'014'];
+                if(cols.includes(px+'014')) {
+                    if(isEmpty(c14) || getVal(c14) === 0) addErr(px+'014', 'NAO_CRITICO', 'TEC_R6', `Carregamento vazio ou zero.`);
+                    else if (getVal(c14) > 0 && getVal(c14) <= 1) addErr(px+'014', 'NAO_CRITICO', 'TEC_R7', `Carregamento parece ser decimal (0-1). Exigido percentual.`);
+                }
+            }
+            return rowErrors;
+        }
+
+        /**
+         * UX: Drag n Drop e Input Handle
+         */
+        const dropArea = document.getElementById('dropArea');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(en => dropArea.addEventListener(en, (e)=>{e.preventDefault(); e.stopPropagation();}, false));
+        dropArea.addEventListener('dragover', () => dropArea.classList.add('dragover'));
+        dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
+        dropArea.addEventListener('drop', (e) => {
+            dropArea.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+        });
+        document.getElementById('multiFileInput').addEventListener('change', (e) => {
+            if (e.target.files.length) handleFiles(e.target.files);
+        });
+
+        // Loop de Parsing e Validação Assíncrona
+        async function handleFiles(files) {
+            document.getElementById('loadingIndicator').classList.remove('hidden');
+            document.querySelector('#uploadView label').style.opacity = '0.5';
+            dropArea.style.pointerEvents = 'none';
+
+            let tasks = Array.from(files).map(file => new Promise((resolve) => {
+                Papa.parse(file, {
+                    header: true, delimiter: ";", skipEmptyLines: true,
+                    transformHeader: h => h.trim().toLowerCase(),
+                    complete: (r) => {
+                        let cols = r.meta.fields;
+                        let bType = 'DESCONHECIDO';
+                        if(cols.includes('com_001')) bType = 'COMERCIAL';
+                        else if (cols.includes('serv_001')) bType = 'SERVICOS';
+                        else if (cols.includes('tecal_001')) bType = 'TEC_AL';
+                        else if (cols.includes('tecsub_001')) bType = 'TEC_SUB';
+                        else if (cols.includes('tecld_001')) bType = 'TEC_LD';
+                        
+                        if(bType !== 'DESCONHECIDO') {
+                            let errors = [];
+                            let metrics = { rowCount: r.data.length, cxCritical: 0, cxWarning: 0 };
+                            r.data.forEach((row, i) => {
+                                let ev = solveRowErrors(row, bType, cols);
+                                ev.forEach(err => {
+                                    errors.push({ linha: i+2, rawRow: row, ...err });
+                                    if(err.type === 'CRITICO') metrics.cxCritical++; else metrics.cxWarning++;
+                                });
+                            });
+                            
+                            let brokenLines = new Set(errors.map(x=>x.linha)).size;
+                            metrics.score = r.data.length ? (((r.data.length - brokenLines) / r.data.length) * 100) : 0;
+                            
+                            globalDataCenter.files[bType] = {
+                                type: bType, filename: file.name, rows: r.data, cols: cols, 
+                                errors: errors, metrics: metrics
+                            };
+                        }
+                        resolve(true);
+                    }
+                });
+            }));
+
+            await Promise.all(tasks);
+            
+            // Build UI
+            if(Object.keys(globalDataCenter.files).length > 0) {
+                document.getElementById('uploadView').classList.add('hidden');
+                document.getElementById('sidebarPanel').classList.remove('hidden');
+                document.getElementById('dashboardView').classList.remove('hidden');
+                document.getElementById('btnExportAll').classList.remove('hidden');
+                
+                buildSidebar();
+                
+                // Abre o primeiro (ordem alfabética pra sempre ter fallback)
+                activateTab(Object.keys(globalDataCenter.files)[0]);
+            } else {
+                alert('Nenhum dos arquivos correspondeu a relatórios INDGER válidos.');
+                location.reload();
+            }
+        }
+
+        /**
+         * Renderização UI e Interação
+         */
+        function buildSidebar() {
+            const nl = document.getElementById('navList');
+            nl.innerHTML = '';
+            
+            let globalTotalRows = 0, globalTotalBrokenLines = 0;
+            
+            Object.values(globalDataCenter.files).forEach(fObj => {
+                let badgeColor = fObj.metrics.score > 98 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 
+                                 fObj.metrics.score > 90 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 
+                                 'bg-red-500/20 text-red-400 border-red-500/30';
+
+                let brokenLinesTab = new Set(fObj.errors.map(x=>x.linha)).size;
+                globalTotalRows += fObj.metrics.rowCount;
+                globalTotalBrokenLines += brokenLinesTab;
+
+                let li = document.createElement('li');
+                li.id = 'tab_' + fObj.type;
+                li.className = "nav-item cursor-pointer px-5 py-3 border-l-4 border-transparent hover:bg-slate-800/50 flex flex-col gap-1.5";
+                li.onclick = () => activateTab(fObj.type);
+                
+                li.innerHTML = `
+                    <div class="flex justify-between items-center w-full">
+                        <span class="text-xs font-bold font-heading text-slate-300 tracking-wider">${fObj.type}</span>
+                        <span class="px-2 py-0.5 rounded text-[9px] font-mono border ${badgeColor}">${fObj.metrics.score.toFixed(1)}%</span>
+                    </div>
+                    <div class="flex justify-between items-center text-[10px]">
+                        <span class="text-slate-500 truncate" title="${fObj.filename}">${fObj.filename}</span>
+                        <span class="text-slate-500 font-mono">${fObj.metrics.rowCount} L</span>
+                    </div>
+                `;
+                nl.appendChild(li);
+            });
+            
+            let gScore = globalTotalRows ? (((globalTotalRows - globalTotalBrokenLines) / globalTotalRows) * 100) : 0;
+            const gText = document.getElementById('globalScoreText');
+            gText.innerText = gScore.toFixed(1) + '%';
+            if(gScore < 95) gText.className = "text-2xl font-bold font-heading text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]";
+            if(gScore < 90) gText.className = "text-2xl font-bold font-heading text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]";
+        }
+
+        function activateTab(type) {
+            globalDataCenter.activeTab = type;
+            let fObj = globalDataCenter.files[type];
+            
+            // Sidebar updates
+            document.querySelectorAll('#navList li').forEach(el => el.classList.remove('active', 'border-blue-500'));
+            const tl = document.getElementById('tab_' + type);
+            tl.classList.add('active', 'border-blue-500');
+            tl.classList.remove('border-transparent');
+
+            // Header Updates
+            document.getElementById('activeBaseTitle').innerHTML = `${fObj.type} <span class="px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 text-[10px] font-mono border border-blue-500/30 uppercase tracking-widest ml-2">Base Visível</span>`;
+            
+            let scT = document.getElementById('activeScore');
+            scT.innerText = fObj.metrics.score.toFixed(1) + '%';
+            if(fObj.metrics.score < 90) scT.className = "text-3xl font-heading font-black text-red-400";
+            else if (fObj.metrics.score < 98) scT.className = "text-3xl font-heading font-black text-amber-400";
+            else scT.className = "text-3xl font-heading font-black text-emerald-400";
+
+            document.getElementById('kpiRows').innerText = fObj.metrics.rowCount.toLocaleString('pt-BR');
+            document.getElementById('kpiCritical').innerText = fObj.metrics.cxCritical.toLocaleString('pt-BR');
+            document.getElementById('kpiWarning').innerText = fObj.metrics.cxWarning.toLocaleString('pt-BR');
+
+            // Reports Content
+            if(fObj.errors.length === 0) {
+                document.getElementById('noErrorsDivActive').classList.remove('hidden');
+                document.getElementById('errorsContainerActive').classList.add('hidden');
+            } else {
+                document.getElementById('noErrorsDivActive').classList.add('hidden');
+                document.getElementById('errorsContainerActive').classList.remove('hidden');
+                
+                const errBody = document.getElementById('errorListItemsActive');
+                errBody.innerHTML = '';
+                fObj.errors.forEach(err => {
+                    let isCrit = err.type === 'CRITICO';
+                    let tr = document.createElement('tr');
+                    tr.className = `hover:bg-slate-700/30 transition-colors ${isCrit?'border-l-4 border-l-red-500':'border-l-4 border-l-amber-500'}`;
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 text-center font-mono text-slate-400">#${err.linha}</td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="px-2 py-1 rounded text-[9px] font-bold tracking-wider ${isCrit?'bg-red-500/20 text-red-400':'bg-amber-500/20 text-amber-400'}">${err.type}</span>
+                        </td>
+                        <td class="px-4 py-3"><span class="font-mono bg-slate-900 px-2 py-0.5 rounded text-slate-300 border border-slate-700/50">${err.col}</span></td>
+                        <td class="px-4 py-3">
+                            <p class="text-slate-200 font-medium mb-0.5">${err.msg}</p>
+                            <p class="text-slate-400 text-[10px] pr-4">${err.desc}</p>
+                        </td>
+                    `;
+                    errBody.appendChild(tr);
+                });
+            }
+
+            // Raw Data Table Render
+            const thRaw = document.getElementById('tableHeaderRaw');
+            const tbRaw = document.getElementById('tableBodyRaw');
+            thRaw.innerHTML = ''; tbRaw.innerHTML = '';
+            
+            fObj.cols.forEach(c => {
+                let th = document.createElement('th');
+                th.className = "px-4 py-3 font-semibold uppercase tracking-wider whitespace-nowrap";
+                th.innerText = c;
+                thRaw.appendChild(th);
+            });
+            // Limitador de render para não travar navegador (Render max 500 lines) no client
+            let sliceRender = fObj.rows.slice(0, 500); 
+            sliceRender.forEach((row, idx) => {
+                let tr = document.createElement('tr');
+                let rowErrorsHere = fObj.errors.filter(e => e.linha === (idx + 2));
+                
+                let isCriticalRow = rowErrorsHere.some(e => e.type === 'CRITICO');
+                let isNCRow = rowErrorsHere.some(e => e.type === 'NAO_CRITICO') && !isCriticalRow;
+                if(isCriticalRow) tr.className = "row-critical";
+                else if(isNCRow) tr.className = "row-warning";
+                else tr.className = "row-ok";
+
+                fObj.cols.forEach(c => {
+                    let cellErrorHere = rowErrorsHere.find(e => e.col === c);
+                    let td = document.createElement('td');
+                    let classes = "px-4 py-2 border-b border-slate-700/30 whitespace-nowrap";
+                    
+                    if(cellErrorHere) {
+                        td.setAttribute('data-error', cellErrorHere.desc);
+                        classes += cellErrorHere.type === 'CRITICO' ? " cell-critical tooltip" : " cell-warning tooltip";
+                    }
+                    td.className = classes;
+                    td.innerText = row[c] || "";
+                    tr.appendChild(td);
+                });
+                tbRaw.appendChild(tr);
+            });
+        }
+
+        // Export All
+        document.getElementById('btnExportAll').addEventListener('click', () => {
+            let csvLines = ["Mesa (Arquivo);Linha Excel;Gravidade;Campo ANEEL;Cod_Erro;Descricao"];
+            
+            Object.values(globalDataCenter.files).forEach(fObj => {
+                fObj.errors.forEach(e => {
+                    let d = e.desc.replace(/;/g, ",").replace(/\n/g, " ");
+                    csvLines.push(`${fObj.type};${e.linha};${e.type};${e.col};${e.msg};${d}`);
+                });
+            });
+
+            if(csvLines.length === 1) { alert("Sua suíte está impecável, não há alertas para exportar!"); return; }
+
+            const blob = new Blob(["\ufeff", csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `AUDITORIA_MASTER_INDGER_${new Date().getTime()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+    </script>
+</body>
+</html>
