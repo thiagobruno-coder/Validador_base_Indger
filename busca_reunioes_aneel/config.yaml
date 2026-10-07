@@ -1,0 +1,74 @@
+# Configuração da busca nas Reuniões Públicas da ANEEL.
+# Edite este arquivo para incluir os processos e palavras-chave que você acompanha.
+
+# Áreas de notícias da ANEEL a varrer (idAreaNoticia):
+#   425 = Pautas e Atas das Reuniões Públicas / Circuitos Deliberativos da Diretoria
+#   424 = Listas das Sessões de Distribuição de Processos aos Diretores-Relatores
+areas:
+  425: "Pautas e Atas"
+  424: "Distribuição de Processos"
+
+# Período padrão (pode ser sobrescrito na linha de comando com --desde / --ate).
+# Formato: AAAA-MM-DD. Deixe vazio para não limitar.
+desde: "2026-01-01"
+ate: ""
+
+# Limite de páginas da listagem por área (cada página tem 15 reuniões).
+max_paginas: 10
+
+# Intervalo (segundos) entre requisições ao site da ANEEL, para não sobrecarregá-lo.
+intervalo_requisicoes: 1.5
+
+# Números de processo a procurar. Pode escrever com ou sem pontuação:
+#   "48500.001234/2025-11"  ou  "48500001234202511"
+# Também aceita trechos parciais, ex.: "001234/2025".
+processos:
+  # - "48500.001234/2025-11"
+
+# Empresas do Grupo Energisa. Cada empresa tem:
+#   nomes:  buscados sem diferenciar maiúsculas/minúsculas e acentos
+#   siglas: buscadas exatamente em MAIÚSCULAS e como palavra inteira (evita falsos positivos)
+empresas:
+  "Energisa Mato Grosso do Sul (EMS)":
+    nomes: ["Energisa Mato Grosso do Sul", "Energisa MS", "Enersul"]
+    siglas: ["EMS"]
+  "Energisa Mato Grosso (EMT)":
+    nomes: ["Energisa Mato Grosso", "Energisa MT", "Centrais Elétricas Matogrossenses", "Cemat"]
+    siglas: ["EMT"]
+  "Energisa Paraíba (EPB)":
+    nomes: ["Energisa Paraíba", "Energisa PB", "Saelpa", "Energisa Borborema"]
+    siglas: ["EPB", "EBO"]
+  "Energisa Sergipe (ESE)":
+    nomes: ["Energisa Sergipe", "Energisa SE", "Energipe"]
+    siglas: ["ESE"]
+  "Energisa Tocantins (ETO)":
+    nomes: ["Energisa Tocantins", "Energisa TO", "Celtins"]
+    siglas: ["ETO"]
+  "Energisa Acre (EAC)":
+    nomes: ["Energisa Acre", "Energisa AC", "Eletroacre"]
+    siglas: ["EAC"]
+  "Energisa Sul-Sudeste (ESS)":
+    nomes: ["Energisa Sul-Sudeste", "Energisa Sul Sudeste", "Caiuá Distribuição",
+            "Empresa Elétrica Bragantina", "Companhia Nacional de Energia Elétrica",
+            "Empresa de Distribuição de Energia Vale Paranapanema", "Companhia Força e Luz do Oeste"]
+    siglas: ["ESS"]
+  "Energisa Minas Rio (EMR)":
+    nomes: ["Energisa Minas Rio", "Energisa Minas Gerais", "Energisa Nova Friburgo"]
+    siglas: ["EMR", "EMG", "ENF"]
+  "Energisa Rondônia (ERO)":
+    nomes: ["Energisa Rondônia", "Energisa RO", "Ceron", "Centrais Elétricas de Rondônia"]
+    siglas: ["ERO"]
+  "Grupo Energisa (genérico)":
+    nomes: ["Energisa"]
+    siglas: []
+
+# Outras palavras-chave livres (sem diferenciar maiúsculas/minúsculas e acentos).
+palavras_chave:
+  # - "revisão tarifária"
+  # - "bandeira tarifária"
+
+# Expressões regulares avançadas (opcional), no formato  nome: "regex".
+regex: {}
+
+# Quantidade de caracteres antes/depois da ocorrência no trecho do relatório.
+contexto_caracteres: 250
