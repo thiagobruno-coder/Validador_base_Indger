@@ -76,7 +76,10 @@ class Buscador:
             digitos = re.sub(r"\D", "", str(processo))
             if len(digitos) >= 4:
                 termos.append(Termo("Processo", formatar_processo(digitos), digitos=digitos))
+        ignoradas = set(config.get("empresas_ignoradas") or [])
         for nome_empresa, dados in (config.get("empresas") or {}).items():
+            if nome_empresa in ignoradas:
+                continue
             dados = dados or {}
             generico = "genérico" in nome_empresa.lower() or "generico" in nome_empresa.lower()
             for nome in dados.get("nomes") or []:

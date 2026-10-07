@@ -138,8 +138,8 @@ class Cliente:
                     if eh_desafio_cloudflare(resposta.status, resposta.conteudo):
                         if self.modo == "requests":
                             raise BloqueioCloudflare(
-                                "O Cloudflare da ANEEL bloqueou o acesso direto. Rode com --modo navegador "
-                                "ou use o modo 'local' com arquivos salvos.")
+                                "O site da ANEEL (Cloudflare) bloqueou o acesso direto. Use o acesso pelo "
+                                "Chrome (modo 'auto' ou 'navegador') ou busque em arquivos já baixados.")
                         log.info("Cloudflare detectado; abrindo o navegador para concluir a verificação…")
                         resposta = self._via_navegador(url)
                 if resposta.status >= 500 or resposta.status == 429:
