@@ -17,7 +17,13 @@ o trecho onde o termo aparece e os links. Também são gerados CSVs.
 3. Extrai o texto e faz a busca sem diferenciar maiúsculas/minúsculas e acentos. As siglas (EMS, EMT…) só contam em MAIÚSCULAS e como palavra inteira, para evitar falsos positivos.
 4. Gera `resultados/busca_aneel_AAAAMMDD_HHMMSS.xlsx` com as abas **Resumo**, **Ocorrências** e **Documentos analisados** (esta inclui os erros de leitura e todos os processos citados em cada documento).
 
-> **Cloudflare:** o site `www2.aneel.gov.br` é protegido pelo Cloudflare, que exibe a tela "Um momento…".
+> **Por que "pelo meu Chrome"?** O Cloudflare do site da ANEEL recusa navegadores abertos automaticamente:
+> a verificação fica repetindo sem fim. Na coleta pelo navegador, quem passa pela verificação é você, no seu
+> Chrome de sempre. O favorito só baixa, dentro da sua sessão e em ritmo moderado, as mesmas páginas que você
+> abriria clicando, e envia cada uma para o painel no seu computador. Anexos hospedados em outro site (ex.: SEI)
+> aparecem na lista "Documentos com problema de leitura", com o link para baixar e usar na busca em arquivos.
+>
+> **Cloudflare (linha de comando):** o site `www2.aneel.gov.br` é protegido pelo Cloudflare, que exibe a tela "Um momento…".
 > No modo padrão (`auto`), o programa tenta o acesso direto e, se for bloqueado, **abre o Chrome**,
 > espera a verificação terminar (se aparecer a caixa "Confirme que você é humano", clique nela) e faz
 > os downloads por dentro dessa janela. A sessão fica salva em `.perfil_navegador/`, então nas execuções
@@ -31,7 +37,10 @@ o trecho onde o termo aparece e os links. Também são gerados CSVs.
    - Depois, abre o painel no navegador (`http://127.0.0.1:8765`).
 3. No painel:
    - **2. O que procurar:** cole os números de processo e as palavras-chave, revise as empresas e clique em **Salvar**.
-   - **1. Buscar:** escolha o período e clique em **Iniciar busca**. Se o Chrome abrir pedindo verificação, aguarde ou clique na caixa e não feche a janela.
+   - **1. Buscar:** deixe marcada a opção **"No site da ANEEL, pelo meu Chrome (recomendado)"**:
+     1. Só na primeira vez, arraste o botão **📥 Coletar ANEEL** para a barra de favoritos do Chrome (Ctrl+Shift+B mostra a barra).
+     2. Escolha o período e clique em **Abrir site da ANEEL**.
+     3. No site, passe pela verificação normalmente e clique no favorito **📥 Coletar ANEEL**. Uma caixa no canto mostra o progresso. Deixe a aba aberta até terminar.
    - **3. Resultados:** veja as ocorrências com o trecho destacado, filtre por termo e clique em **Baixar Excel**.
    - Para buscar em PDFs que você já tem, escolha **"Em arquivos do meu computador"** e arraste os arquivos.
 4. Para fechar, clique em **Encerrar painel** ou feche a janela preta.
@@ -135,6 +144,8 @@ busca_reunioes_aneel/
 │   ├── __main__.py          ← linha de comando
 │   ├── painel.py            ← servidor local do painel
 │   ├── web/painel.html      ← página do painel
+│   ├── web/coletor.js       ← script do favorito "Coletar ANEEL" (roda na página da ANEEL)
+│   ├── coleta.py            ← recebe e analisa o que o coletor envia
 │   ├── executor.py          ← execução de uma busca completa (usada pelo painel e pela linha de comando)
 │   ├── site_aneel.py        ← leitura das listagens e páginas das reuniões
 │   ├── cliente.py           ← downloads (cache, novas tentativas, Cloudflare/navegador)

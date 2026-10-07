@@ -85,6 +85,9 @@
   footer { max-width: 1200px; margin: 0 auto; padding: 0 16px 24px; color: var(--suave); font-size: 12px;
            display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
   .oculto { display: none !important; }
+  .passos { margin: 0; padding-left: 20px; } .passos li { margin-bottom: 10px; }
+  a.favorito { display: inline-block; background: var(--primaria); color: var(--primaria-texto); font-weight: 700;
+               padding: 7px 14px; border-radius: 6px; text-decoration: none; cursor: grab; margin: 4px 0; }
   @media (max-width: 640px) { .numero { min-width: 0; flex: 1 1 40%; } }
 </style>
 </head>
@@ -108,7 +111,8 @@
     <div class="cartao">
       <h2>Onde procurar</h2>
       <div class="opcoes" style="margin-bottom:14px">
-        <label><input type="radio" name="fonte" value="online" checked> No site da ANEEL</label>
+        <label><input type="radio" name="fonte" value="coletor" checked> No site da ANEEL, pelo meu Chrome <b>(recomendado)</b></label>
+        <label><input type="radio" name="fonte" value="online"> No site da ANEEL, abrindo o Chrome automaticamente</label>
         <label><input type="radio" name="fonte" value="local"> Em arquivos do meu computador (PDF, DOCX, HTML…)</label>
       </div>
 
@@ -126,7 +130,7 @@
         <details style="margin-top:12px">
           <summary class="dica" style="cursor:pointer">Opções avançadas</summary>
           <div class="grade" style="margin-top:10px">
-            <div><label for="modo">Forma de acesso ao site</label>
+            <div class="avancado-auto"><label for="modo">Forma de acesso ao site</label>
               <select id="modo">
                 <option value="auto">Automática (abre o Chrome se o site pedir verificação)</option>
                 <option value="navegador">Sempre pelo Chrome</option>
@@ -138,9 +142,24 @@
             </div>
           </div>
         </details>
-        <div class="aviso-caixa">
-          O site da ANEEL usa uma verificação de segurança (Cloudflare). Se uma janela do <b>Chrome</b> abrir sozinha,
-          aguarde ou clique em <i>"Confirme que você é humano"</i>, e <b>não feche essa janela</b> até a busca terminar.
+        <div class="aviso-caixa so-auto oculto">
+          O site da ANEEL usa uma verificação de segurança (Cloudflare) que costuma <b>recusar navegadores abertos
+          automaticamente</b>; se a verificação ficar repetindo, use a opção <b>"pelo meu Chrome"</b>.
+        </div>
+        <div class="so-coletor" style="margin-top:14px">
+          <label>Como funciona</label>
+          <ol class="passos">
+            <li><b>Só na primeira vez:</b> arraste este botão para a barra de favoritos do Chrome
+              <span class="dica">(se a barra não aparecer, aperte Ctrl+Shift+B)</span>:<br>
+              <a class="favorito" id="favorito" href="#" title="Arraste para a barra de favoritos">📥 Coletar ANEEL</a></li>
+            <li>Escolha o período e as listas acima e clique em <b>"Abrir site da ANEEL"</b> (botão abaixo).</li>
+            <li>No site, passe pela verificação normalmente. Quando a lista de reuniões aparecer,
+              clique no favorito <b>📥 Coletar ANEEL</b>.</li>
+            <li>Uma caixa aparece no canto do site mostrando o progresso, e o andamento também aparece aqui.
+              <b>Deixe a aba do site aberta</b> até terminar.</li>
+          </ol>
+          <p class="dica">Se o Chrome perguntar se o site pode acessar dispositivos da rede local, clique em
+            <b>Permitir</b>: é o site conversando com este painel no seu computador.</p>
         </div>
       </div>
 
@@ -295,8 +314,12 @@ function preencherConfig(c) {
   const corpo = $("#empresas"); corpo.innerHTML = "";
   c.empresas.forEach((e) => corpo.appendChild(linhaEmpresa(e)));
   $("#desde").value = c.desde || ""; $("#ate").value = c.ate || ""; $("#max_paginas").value = c.max_paginas || 10;
+  // Mantém as listas que o usuário desmarcou quando a configuração é recarregada.
+  const existentes = [...document.querySelectorAll(".area")];
+  const marcadas = existentes.length ? new Set(existentes.filter((c) => c.checked).map((c) => c.value)) : null;
   $("#areas").innerHTML = c.areas.map((a) =>
-    `<label><input type="checkbox" class="area" value="${a.id}" checked> ${esc(a.nome)} <span class="dica">(${a.id})</span></label>`).join("");
+    `<label><input type="checkbox" class="area" value="${a.id}" ${!marcadas || marcadas.has(String(a.id)) ? "checked" : ""}>` +
+    ` ${esc(a.nome)} <span class="dica">(${a.id})</span></label>`).join("");
   configAlterada = false; $("#salvo-info").textContent = "";
 }
 function lerConfigDaTela() {
@@ -326,11 +349,20 @@ $("#nova-empresa").addEventListener("click", () => {
 $("#salvar").addEventListener("click", () => salvarConfig().catch((e) => aviso(e.message)));
 
 // ---------------------------------------------------------------- fonte (online/local) e envio de arquivos
-document.querySelectorAll("input[name=fonte]").forEach((r) => r.addEventListener("change", () => {
-  const local = $("input[name=fonte]:checked").value === "local";
-  $("#opcoes-online").classList.toggle("oculto", local);
-  $("#opcoes-local").classList.toggle("oculto", !local);
-}));
+function atualizarFonte() {
+  const fonte = $("input[name=fonte]:checked").value;
+  $("#opcoes-online").classList.toggle("oculto", fonte === "local");
+  $("#opcoes-local").classList.toggle("oculto", fonte !== "local");
+  document.querySelectorAll(".so-coletor").forEach((e) => e.classList.toggle("oculto", fonte !== "coletor"));
+  document.querySelectorAll(".so-auto").forEach((e) => e.classList.toggle("oculto", fonte !== "online"));
+  document.querySelectorAll(".avancado-auto").forEach((e) => e.classList.toggle("oculto", fonte !== "online"));
+  $("#iniciar").textContent = fonte === "coletor" ? "▶ Abrir site da ANEEL" : "▶ Iniciar busca";
+}
+document.querySelectorAll("input[name=fonte]").forEach((r) => r.addEventListener("change", atualizarFonte));
+// O favorito carrega o coletor servido por este painel (o endereço inclui a porta atual).
+$("#favorito").href = "javascript:(function(){var s=document.createElement('script');s.src='" + location.origin +
+  "/coletor.js?'+Date.now();document.body.appendChild(s);})();";
+$("#favorito").addEventListener("click", (e) => { e.preventDefault(); aviso("Arraste o botão para a barra de favoritos; o clique funciona no site da ANEEL.", 6000); });
 const soltar = $("#soltar");
 soltar.addEventListener("click", () => $("#arquivo").click());
 soltar.addEventListener("dragover", (e) => { e.preventDefault(); soltar.classList.add("sobre"); });
@@ -354,13 +386,23 @@ $("#limpar-enviados").addEventListener("click", async () => {
 $("#iniciar").addEventListener("click", async () => {
   try {
     if (configAlterada || $("#desde").value || $("#ate").value) await salvarConfig(true);
-    const local = $("input[name=fonte]:checked").value === "local";
+    const fonte = $("input[name=fonte]:checked").value;
+    const areas = [...document.querySelectorAll(".area:checked")].map((c) => c.value);
+    if (fonte === "coletor") {
+      if (!areas.length) return aviso("Marque pelo menos uma lista da ANEEL.");
+      await api("/api/preparar_coleta", {desde: $("#desde").value, ate: $("#ate").value,
+        max_paginas: $("#max_paginas").value, areas});
+      window.open("https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/?idAreaNoticia=" + areas[0], "_blank");
+      aviso("Site aberto em outra aba. Passe pela verificação e clique no favorito 📥 Coletar ANEEL.", 8000);
+      return;
+    }
+    const local = fonte === "local";
     const pasta = $("#pasta").value.trim();
     await api("/api/iniciar", {
       comando: local ? "local" : "online",
       pasta, usar_enviados: local && !pasta,
       desde: $("#desde").value, ate: $("#ate").value, max_paginas: $("#max_paginas").value,
-      areas: [...document.querySelectorAll(".area:checked")].map((c) => c.value),
+      areas,
       modo: $("#modo").value, sem_cache: $("#sem_cache").checked, salvar_textos: $("#salvar_textos").checked,
     });
     $("#log").innerHTML = ""; $("#final").classList.add("oculto");
@@ -399,7 +441,7 @@ async function atualizarStatus() {
   const a = s.andamento || {};
   if (s.rodando) {
     $("#bolinha").className = "bolinha rodando";
-    $("#status-texto").textContent = s.cancelando ? "Parando…" : "Buscando…";
+    $("#status-texto").textContent = s.cancelando ? "Parando…" : (s.coletando ? "Coletando pelo Chrome…" : "Buscando…");
     $("#n-reunioes").textContent = a.reunioes ?? 0; $("#n-documentos").textContent = a.documentos ?? 0;
     $("#n-ocorrencias").textContent = a.ocorrencias ?? 0; $("#n-tempo").textContent = formatarTempo(s.segundos);
   } else if (s.ultima) {
@@ -491,6 +533,7 @@ async function carregarRelatorios() {
 
 // ---------------------------------------------------------------- início
 window.addEventListener("beforeunload", (e) => { if (configAlterada) { e.preventDefault(); e.returnValue = ""; } });
+atualizarFonte();
 api("/api/config").then(preencherConfig).catch((e) => aviso("Erro ao ler a configuração: " + e.message, 8000));
 carregarRelatorios();
 atualizarStatus();
