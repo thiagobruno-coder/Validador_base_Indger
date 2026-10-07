@@ -19,11 +19,15 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from .executor import AREAS_PADRAO, ErroConfiguracao, carregar_config, executar, salvar_config
+from .coleta import Coleta
+from .executor import AREAS_PADRAO, ErroConfiguracao, Execucao, carregar_config, executar, salvar_config
 
 log = logging.getLogger("aneel_busca")
 
 PAGINA = Path(__file__).parent / "web" / "painel.html"
+COLETOR = Path(__file__).parent / "web" / "coletor.js"
+# Só a página da ANEEL (aberta no Chrome do usuário) pode enviar conteúdo para a coleta.
+ORIGENS_COLETA = {"https://www2.aneel.gov.br", "http://www2.aneel.gov.br"}
 LIMITE_LOG = 3000
 LIMITE_OCORRENCIAS = 5000
 EXTENSOES_ENVIO = (".pdf", ".docx", ".xlsx", ".htm", ".html", ".txt", ".rtf", ".zip")
@@ -45,8 +49,9 @@ class _CapturaLog(logging.Handler):
 class Estado:
     """Tudo que o painel precisa saber sobre a busca em andamento e a última concluída."""
 
-    def __init__(self, caminho_config: Path, saida: Path):
+    def __init__(self, caminho_config: Path, saida: Path, origens_coleta=()):
         self.caminho_config = caminho_config
+        self.origens_coleta = ORIGENS_COLETA | set(origens_coleta)
         self.saida = saida
         self.pasta_envios = saida / "arquivos_enviados"
         self.trava = threading.Lock()
@@ -59,6 +64,8 @@ class Estado:
         self.ultima: dict | None = None  # resumo da última execução
         self.ultimas_ocorrencias: list[dict] = []
         self.ultimos_documentos: list[dict] = []
+        self.coleta: Coleta | None = None
+        self.pedido_coleta: dict = {}
 
     # ------------------------------------------------------------------ logs
     def adicionar_log(self, nivel: str, texto: str) -> None:
@@ -74,8 +81,49 @@ class Estado:
 
     # ------------------------------------------------------------------ execução
     @property
+    def coletando(self) -> bool:
+        return self.coleta is not None and self.coleta.ativa
+
+    @property
     def rodando(self) -> bool:
-        return self.thread is not None and self.thread.is_alive()
+        return (self.thread is not None and self.thread.is_alive()) or self.coletando
+
+    # ------------------------------------------------------------------ coleta pelo navegador
+    def iniciar_coleta(self) -> dict:
+        if self.thread is not None and self.thread.is_alive():
+            raise ErroConfiguracao("Já existe uma busca em andamento no painel.")
+        if self.coletando:
+            if time.time() - self.coleta.ultima_atividade < 60:
+                raise ErroConfiguracao("Já existe uma coleta em andamento (em outra aba?).")
+            self.finalizar_coleta()  # coleta abandonada: salva o que tinha
+        self.coleta = Coleta(carregar_config(self.caminho_config), self.pedido_coleta)
+        self.inicio = time.time()
+        self.ultima = None
+        self.varredura = self.coleta.varredura
+        log.info("Coleta pelo navegador iniciada (%s até %s).",
+                 self.coleta.desde.strftime("%d/%m/%Y") if self.coleta.desde else "início",
+                 self.coleta.ate.strftime("%d/%m/%Y") if self.coleta.ate else "hoje")
+        return self.coleta.plano()
+
+    def coleta_ativa(self) -> Coleta:
+        if not self.coletando:
+            raise ErroConfiguracao("Nenhuma coleta em andamento. Clique no favorito de novo.")
+        return self.coleta
+
+    def finalizar_coleta(self) -> dict:
+        coleta = self.coleta_ativa()
+        self._registrar_execucao(coleta.finalizar(self.saida))
+        return self.ultima
+
+    def _verificar_coleta_parada(self) -> None:
+        """Finaliza a coleta se o usuário pediu para parar e o coletor não respondeu,
+        ou se a aba da ANEEL foi fechada no meio (sem atividade há 10 minutos)."""
+        if not self.coletando:
+            return
+        ocioso = time.time() - self.coleta.ultima_atividade
+        if (self.coleta.cancelar.is_set() and ocioso > 15) or ocioso > 600:
+            log.warning("O coletor parou de responder; gerando relatório com o que foi coletado.")
+            self.finalizar_coleta()
 
     def iniciar(self, pedido: dict) -> None:
         if self.rodando:
@@ -128,6 +176,9 @@ class Estado:
             self.ultima = {"situacao": "erro", "mensagem": str(erro), "arquivo": None,
                            "fim": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
             return
+        self._registrar_execucao(execucao)
+
+    def _registrar_execucao(self, execucao: Execucao) -> None:
         resultado = execucao.resultado
         self.ultimas_ocorrencias = [asdict(o) for o in resultado.ocorrencias[:LIMITE_OCORRENCIAS]]
         self.ultimos_documentos = [asdict(d) for d in resultado.documentos]
@@ -145,6 +196,7 @@ class Estado:
                  len(resultado.documentos), len(resultado.ocorrencias))
 
     def status(self, seq: int) -> dict:
+        self._verificar_coleta_parada()
         andamento = {}
         if self.varredura is not None:
             r = self.varredura.resultado
@@ -152,7 +204,9 @@ class Estado:
                          "reunioes": len({d.reuniao for d in r.documentos})}
         return {
             "rodando": self.rodando,
-            "cancelando": self.rodando and self.cancelar.is_set(),
+            "cancelando": self.rodando and (self.cancelar.is_set() or
+                                            (self.coletando and self.coleta.cancelar.is_set())),
+            "coletando": self.coletando,
             "segundos": int(time.time() - self.inicio) if self.inicio and self.rodando else None,
             "andamento": andamento,
             "ultima": self.ultima,
@@ -234,12 +288,26 @@ def _criar_handler(estado: Estado, servidor_ref: dict):
             host = (self.headers.get("Host") or "").split(":")[0]
             return host in ("127.0.0.1", "localhost")
 
+        def _origem_coleta(self) -> str | None:
+            """Origem da ANEEL autorizada a chamar as rotas /api/coleta/ (ou None)."""
+            origem = self.headers.get("Origin") or ""
+            if urlparse(self.path).path.startswith("/api/coleta/") and origem in estado.origens_coleta:
+                return origem
+            return None
+
+        def _cabecalhos_cors(self) -> None:
+            origem = self._origem_coleta()
+            if origem:
+                self.send_header("Access-Control-Allow-Origin", origem)
+                self.send_header("Vary", "Origin")
+
         def _json(self, dados, status=HTTPStatus.OK) -> None:
             corpo = json.dumps(dados, ensure_ascii=False).encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(corpo)))
             self.send_header("Cache-Control", "no-store")
+            self._cabecalhos_cors()
             self.end_headers()
             self.wfile.write(corpo)
 
@@ -249,6 +317,22 @@ def _criar_handler(estado: Estado, servidor_ref: dict):
         def _corpo(self) -> bytes:
             tamanho = int(self.headers.get("Content-Length") or 0)
             return self.rfile.read(tamanho) if tamanho else b""
+
+        # ---------------------------------------------------------- OPTIONS (pré-verificação do navegador)
+        def do_OPTIONS(self):  # noqa: N802
+            origem = self._origem_coleta()
+            if not self._host_local() or not origem:
+                self.send_response(HTTPStatus.FORBIDDEN)
+                self.end_headers()
+                return
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self.send_header("Access-Control-Allow-Origin", origem)
+            self.send_header("Access-Control-Allow-Methods", "POST")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Painel")
+            self.send_header("Access-Control-Allow-Private-Network", "true")
+            self.send_header("Access-Control-Max-Age", "600")
+            self.send_header("Vary", "Origin")
+            self.end_headers()
 
         # ---------------------------------------------------------- GET
         def do_GET(self):  # noqa: N802
@@ -260,6 +344,14 @@ def _criar_handler(estado: Estado, servidor_ref: dict):
                 corpo = PAGINA.read_bytes()
                 self.send_response(HTTPStatus.OK)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(corpo)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(corpo)
+            elif url.path == "/coletor.js":
+                corpo = COLETOR.read_bytes()
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", "application/javascript; charset=utf-8")
                 self.send_header("Content-Length", str(len(corpo)))
                 self.send_header("Cache-Control", "no-store")
                 self.end_headers()
@@ -304,6 +396,8 @@ def _criar_handler(estado: Estado, servidor_ref: dict):
                 return self._erro("Requisição não autorizada", HTTPStatus.FORBIDDEN)
             url = urlparse(self.path)
             try:
+                if url.path.startswith("/api/coleta/"):
+                    return self._coleta(url.path.rsplit("/", 1)[-1], parse_qs(url.query))
                 if url.path == "/api/enviar":
                     return self._receber_arquivo(parse_qs(url.query))
                 dados = json.loads(self._corpo() or b"{}")
@@ -317,8 +411,14 @@ def _criar_handler(estado: Estado, servidor_ref: dict):
                 elif url.path == "/api/iniciar":
                     estado.iniciar(dados)
                     self._json({"ok": True})
+                elif url.path == "/api/preparar_coleta":
+                    estado.pedido_coleta = dados
+                    self._json({"ok": True})
                 elif url.path == "/api/parar":
-                    if estado.rodando:
+                    if estado.coletando:
+                        estado.coleta.cancelar.set()
+                        log.warning("Parando a coleta… (o coletor encerra após o documento atual)")
+                    elif estado.rodando:
                         estado.cancelar.set()
                         log.warning("Parando a busca… (termina o documento atual e gera o relatório parcial)")
                     self._json({"ok": True})
@@ -337,6 +437,30 @@ def _criar_handler(estado: Estado, servidor_ref: dict):
             except (ErroConfiguracao, ValueError) as erro:
                 self._erro(str(erro))
 
+        def _coleta(self, acao: str, consulta: dict) -> None:
+            """Rotas chamadas pelo coletor (web/coletor.js) a partir da página da ANEEL."""
+            def q(nome: str, padrao: str = "") -> str:
+                return (consulta.get(nome) or [padrao])[0]
+
+            corpo = self._corpo()
+            if acao == "inicio":
+                return self._json(estado.iniciar_coleta())
+            coleta = estado.coleta_ativa()
+            area = int(q("area", "0") or 0)
+            if acao == "listagem":
+                self._json(coleta.receber_listagem(area, q("url"), corpo))
+            elif acao == "pagina":
+                self._json(coleta.receber_pagina(area, q("data"), q("titulo"), q("url"), corpo))
+            elif acao == "anexo":
+                self._json(coleta.receber_anexo(area, q("data"), q("titulo"), q("url_reuniao"), q("nome"), q("url"),
+                                                corpo, q("tipo")))
+            elif acao == "erro":
+                self._json(coleta.receber_erro(area, q("data"), q("titulo"), q("nome"), q("url"), q("mensagem")))
+            elif acao == "fim":
+                self._json(estado.finalizar_coleta())
+            else:
+                self._erro("Não encontrado", HTTPStatus.NOT_FOUND)
+
         def _receber_arquivo(self, consulta: dict) -> None:
             nome = Path(unquote((consulta.get("nome") or [""])[0])).name
             nome = re.sub(r"[^\w\-. ()]+", "_", nome).strip()
@@ -349,8 +473,10 @@ def _criar_handler(estado: Estado, servidor_ref: dict):
     return Handler
 
 
-def criar_servidor(caminho_config: Path, saida: Path, porta: int = 8765) -> tuple[ThreadingHTTPServer, Estado]:
-    estado = Estado(caminho_config, saida)
+def criar_servidor(caminho_config: Path, saida: Path, porta: int = 8765,
+                   origens_coleta=()) -> tuple[ThreadingHTTPServer, Estado]:
+    """origens_coleta: origens extras autorizadas a usar a coleta (usado nos testes)."""
+    estado = Estado(caminho_config, saida, origens_coleta)
     referencia: dict = {}
     handler = _criar_handler(estado, referencia)
     ultimo_erro = None

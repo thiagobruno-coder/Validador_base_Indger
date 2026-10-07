@@ -167,7 +167,8 @@ class Cliente:
                 "O modo navegador precisa do Playwright: pip install playwright && "
                 "python -m playwright install chromium") from erro
         self._pw = sync_playwright().start()
-        opcoes = dict(headless=self.headless, locale="pt-BR", accept_downloads=True)
+        # chromium_sandbox=True evita o aviso "--no-sandbox" na barra do Chrome.
+        opcoes = dict(headless=self.headless, locale="pt-BR", accept_downloads=True, chromium_sandbox=True)
         proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
         if proxy:  # redes corporativas: o navegador não lê essa variável sozinho
             opcoes["proxy"] = {"server": proxy}
@@ -229,7 +230,9 @@ class Cliente:
                          "(se aparecer uma caixa \"Confirme que você é humano\", clique nela)…")
                 avisou = True
             time.sleep(2)
-        raise BloqueioCloudflare("A verificação do Cloudflare não foi concluída em 3 minutos.")
+        raise BloqueioCloudflare(
+            "A verificação do Cloudflare não foi concluída em 3 minutos: o site costuma recusar navegadores "
+            "abertos automaticamente. Use a opção 'Pelo meu Chrome (recomendado)' no painel.")
 
     def _buscar_na_pagina(self, url: str) -> Resposta | None:
         """Baixa a URL com fetch() de dentro da página: usa os mesmos cookies e a mesma
