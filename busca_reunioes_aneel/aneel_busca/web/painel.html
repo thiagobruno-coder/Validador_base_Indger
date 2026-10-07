@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Busca ANEEL</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg: #f4f6f9; --painel: #ffffff; --borda: #dde3ea; --texto: #1c2733; --suave: #5d6b7a;
+    --primaria: #0b5cad; --primaria-texto: #ffffff; --perigo: #b42318; --ok: #1a7f37; --aviso: #9a6700;
+    --marca: #fff1a8; --codigo: #0f1720; --codigo-texto: #d7e0ea; --chip: #e8eef6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1419; --painel: #172029; --borda: #2a3644; --texto: #e3e9ef; --suave: #93a1b0;
+      --primaria: #4a9cf0; --primaria-texto: #08121c; --perigo: #ff7b72; --ok: #56d364; --aviso: #e3b341;
+      --marca: #5a4a00; --codigo: #0a0f14; --codigo-texto: #c9d4df; --chip: #223040;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--texto);
+         font: 15px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; }
+  header { background: var(--painel); border-bottom: 1px solid var(--borda); }
+  .topo { max-width: 1200px; margin: 0 auto; padding: 14px 16px 0; }
+  h1 { font-size: 20px; margin: 0 0 2px; }
+  .sub { color: var(--suave); font-size: 13px; margin: 0 0 10px; }
+  nav { display: flex; gap: 4px; overflow-x: auto; }
+  nav button { background: none; border: 0; border-bottom: 3px solid transparent; color: var(--suave);
+               padding: 10px 14px; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  nav button.ativa { color: var(--primaria); border-bottom-color: var(--primaria); }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  section.aba { display: none; } section.aba.ativa { display: block; }
+  .cartao { background: var(--painel); border: 1px solid var(--borda); border-radius: 10px;
+            padding: 16px; margin-bottom: 16px; }
+  .cartao h2 { font-size: 16px; margin: 0 0 12px; }
+  .grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; }
+  label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .dica { color: var(--suave); font-size: 12px; font-weight: 400; }
+  input[type=text], input[type=date], input[type=number], textarea, select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--borda); border-radius: 6px;
+    background: var(--bg); color: var(--texto); font: inherit; }
+  textarea { min-height: 150px; font-family: Consolas, "Courier New", monospace; font-size: 13px; resize: vertical; }
+  .opcoes { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+  .opcoes label { font-weight: 400; display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; }
+  .botoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button.btn { border: 1px solid var(--borda); background: var(--painel); color: var(--texto); border-radius: 6px;
+               padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.btn:hover { filter: brightness(0.96); }
+  button.btn.primario { background: var(--primaria); border-color: var(--primaria); color: var(--primaria-texto); }
+  button.btn.perigo { color: var(--perigo); border-color: var(--perigo); }
+  button.btn:disabled { opacity: .5; cursor: not-allowed; }
+  .status { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+  .bolinha { width: 10px; height: 10px; border-radius: 50%; background: var(--suave); }
+  .bolinha.rodando { background: var(--primaria); animation: pulsar 1s infinite alternate; }
+  .bolinha.ok { background: var(--ok); } .bolinha.erro { background: var(--perigo); } .bolinha.aviso { background: var(--aviso); }
+  @keyframes pulsar { from { opacity: 1; } to { opacity: .3; } }
+  .numeros { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+  .numero { background: var(--bg); border: 1px solid var(--borda); border-radius: 8px; padding: 8px 14px; min-width: 120px; }
+  .numero b { display: block; font-size: 22px; }
+  .numero span { color: var(--suave); font-size: 12px; }
+  #log { background: var(--codigo); color: var(--codigo-texto); border-radius: 8px; padding: 10px 12px;
+         height: 320px; overflow: auto; font: 12.5px/1.5 Consolas, "Courier New", monospace; white-space: pre-wrap; }
+  #log .WARNING { color: #e3b341; } #log .ERROR, #log .CRITICAL { color: #ff7b72; }
+  .aviso-caixa { border-left: 4px solid var(--aviso); background: var(--bg); padding: 10px 12px; border-radius: 6px;
+                 margin: 10px 0; font-size: 13.5px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+  th { font-size: 12px; color: var(--suave); text-transform: uppercase; letter-spacing: .03em; position: sticky; top: 0;
+       background: var(--painel); }
+  .tabela { max-height: 600px; overflow: auto; border: 1px solid var(--borda); border-radius: 8px; }
+  mark { background: var(--marca); color: inherit; padding: 0 2px; border-radius: 3px; }
+  a { color: var(--primaria); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chip { background: var(--chip); border: 1px solid var(--borda); border-radius: 999px; padding: 4px 12px;
+          font-size: 13px; cursor: pointer; color: var(--texto); font-family: inherit; }
+  .chip.ativo { background: var(--primaria); color: var(--primaria-texto); border-color: var(--primaria); }
+  .empresas td input[type=text] { padding: 5px 8px; font-size: 13px; }
+  .vazio { color: var(--suave); text-align: center; padding: 30px 10px; }
+  .soltar { border: 2px dashed var(--borda); border-radius: 10px; padding: 22px; text-align: center; color: var(--suave);
+            cursor: pointer; margin-top: 8px; }
+  .soltar.sobre { border-color: var(--primaria); color: var(--primaria); }
+  #mensagem { position: fixed; right: 16px; bottom: 16px; max-width: 420px; background: var(--texto); color: var(--bg);
+              padding: 12px 16px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.25); display: none; z-index: 10; }
+  footer { max-width: 1200px; margin: 0 auto; padding: 0 16px 24px; color: var(--suave); font-size: 12px;
+           display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .oculto { display: none !important; }
+  @media (max-width: 640px) { .numero { min-width: 0; flex: 1 1 40%; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="topo">
+    <h1>Busca nas Reuniões Públicas da ANEEL</h1>
+    <p class="sub">Processos, empresas do Grupo Energisa e palavras-chave em pautas, atas e distribuições de processos.</p>
+    <nav>
+      <button data-aba="buscar" class="ativa">1. Buscar</button>
+      <button data-aba="termos">2. O que procurar</button>
+      <button data-aba="resultados">3. Resultados <span id="contagem-aba"></span></button>
+      <button data-aba="relatorios">4. Relatórios salvos</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ============================== BUSCAR ============================== -->
+  <section class="aba ativa" id="aba-buscar">
+    <div class="cartao">
+      <h2>Onde procurar</h2>
+      <div class="opcoes" style="margin-bottom:14px">
+        <label><input type="radio" name="fonte" value="online" checked> No site da ANEEL</label>
+        <label><input type="radio" name="fonte" value="local"> Em arquivos do meu computador (PDF, DOCX, HTML…)</label>
+      </div>
+
+      <div id="opcoes-online">
+        <div class="grade">
+          <div><label for="desde">A partir de</label><input type="date" id="desde"></div>
+          <div><label for="ate">Até <span class="dica">(vazio = hoje)</span></label><input type="date" id="ate"></div>
+          <div><label for="max_paginas">Máximo de páginas por lista <span class="dica">(15 reuniões cada)</span></label>
+               <input type="number" id="max_paginas" min="1" max="200" value="10"></div>
+        </div>
+        <div style="margin-top:12px">
+          <label>Listas da ANEEL</label>
+          <div class="opcoes" id="areas"></div>
+        </div>
+        <details style="margin-top:12px">
+          <summary class="dica" style="cursor:pointer">Opções avançadas</summary>
+          <div class="grade" style="margin-top:10px">
+            <div><label for="modo">Forma de acesso ao site</label>
+              <select id="modo">
+                <option value="auto">Automática (abre o Chrome se o site pedir verificação)</option>
+                <option value="navegador">Sempre pelo Chrome</option>
+                <option value="requests">Somente acesso direto</option>
+              </select></div>
+            <div class="opcoes" style="align-items:end">
+              <label><input type="checkbox" id="sem_cache"> Baixar tudo de novo (ignorar cache)</label>
+              <label><input type="checkbox" id="salvar_textos"> Salvar o texto extraído de cada documento</label>
+            </div>
+          </div>
+        </details>
+        <div class="aviso-caixa">
+          O site da ANEEL usa uma verificação de segurança (Cloudflare). Se uma janela do <b>Chrome</b> abrir sozinha,
+          aguarde ou clique em <i>"Confirme que você é humano"</i>, e <b>não feche essa janela</b> até a busca terminar.
+        </div>
+      </div>
+
+      <div id="opcoes-local" class="oculto">
+        <label>Arraste os arquivos aqui <span class="dica">(ou clique para escolher)</span></label>
+        <div class="soltar" id="soltar">Solte aqui os PDFs, DOCX ou páginas salvas da ANEEL</div>
+        <input type="file" id="arquivo" multiple accept=".pdf,.docx,.xlsx,.htm,.html,.txt,.rtf,.zip" class="oculto">
+        <p class="dica" id="lista-enviados"></p>
+        <div class="botoes" style="margin-bottom:12px"><button class="btn" id="limpar-enviados">Remover arquivos enviados</button></div>
+        <label for="pasta">…ou informe uma pasta do computador <span class="dica">(ex.: C:\ANEEL\pautas)</span></label>
+        <input type="text" id="pasta" placeholder="Deixe vazio para usar os arquivos enviados acima">
+      </div>
+    </div>
+
+    <div class="cartao">
+      <div class="botoes">
+        <button class="btn primario" id="iniciar">▶ Iniciar busca</button>
+        <button class="btn perigo" id="parar" disabled>■ Parar</button>
+        <span class="status" style="margin-left:8px"><span class="bolinha" id="bolinha"></span><span id="status-texto">Pronto</span></span>
+      </div>
+      <div class="numeros">
+        <div class="numero"><b id="n-reunioes">0</b><span>reuniões / pastas</span></div>
+        <div class="numero"><b id="n-documentos">0</b><span>documentos lidos</span></div>
+        <div class="numero"><b id="n-ocorrencias">0</b><span>ocorrências</span></div>
+        <div class="numero"><b id="n-tempo">–</b><span>tempo</span></div>
+      </div>
+      <div id="final" class="oculto aviso-caixa"></div>
+      <label>Andamento</label>
+      <div id="log"></div>
+    </div>
+  </section>
+
+  <!-- ============================== TERMOS ============================== -->
+  <section class="aba" id="aba-termos">
+    <div class="cartao">
+      <h2>Processos e palavras-chave</h2>
+      <div class="grade">
+        <div>
+          <label for="processos">Números de processo <span class="dica">— um por linha; com ou sem pontuação, ou só um trecho (ex.: 001234/2025)</span></label>
+          <textarea id="processos" placeholder="48500.001234/2025-11"></textarea>
+        </div>
+        <div>
+          <label for="palavras">Palavras-chave <span class="dica">— uma por linha; acentos e maiúsculas não importam</span></label>
+          <textarea id="palavras" placeholder="revisão tarifária"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="cartao">
+      <h2>Empresas</h2>
+      <p class="dica" style="margin-top:-6px">Nomes: separados por vírgula, sem diferenciar maiúsculas e acentos. Siglas: separadas por vírgula,
+        contam só em MAIÚSCULAS e como palavra inteira. Desmarque para não procurar a empresa.</p>
+      <div class="tabela" style="max-height:none">
+        <table class="empresas">
+          <thead><tr><th style="width:50px">Usar</th><th style="width:24%">Empresa (nome no relatório)</th><th>Nomes</th><th style="width:16%">Siglas</th><th style="width:40px"></th></tr></thead>
+          <tbody id="empresas"></tbody>
+        </table>
+      </div>
+      <div class="botoes" style="margin-top:10px"><button class="btn" id="nova-empresa">+ Adicionar empresa</button></div>
+    </div>
+    <div class="botoes">
+      <button class="btn primario" id="salvar">Salvar</button>
+      <span class="dica" id="salvo-info"></span>
+    </div>
+  </section>
+
+  <!-- ============================== RESULTADOS ============================== -->
+  <section class="aba" id="aba-resultados">
+    <div class="cartao">
+      <div class="botoes" style="justify-content:space-between;margin-bottom:12px">
+        <h2 style="margin:0">Ocorrências da última busca</h2>
+        <div class="botoes">
+          <button class="btn" id="baixar-excel" disabled>⬇ Baixar Excel</button>
+        </div>
+      </div>
+      <div class="chips" id="chips"></div>
+      <input type="text" id="filtro" placeholder="Filtrar por texto (reunião, documento, trecho…)" style="margin-bottom:12px">
+      <div class="tabela">
+        <table>
+          <thead><tr><th style="width:90px">Data</th><th style="width:22%">Reunião / documento</th><th style="width:16%">Termo</th><th>Trecho</th></tr></thead>
+          <tbody id="tabela-resultados"><tr><td colspan="4" class="vazio">Nenhuma busca concluída nesta sessão.</td></tr></tbody>
+        </table>
+      </div>
+      <p class="dica" id="info-filtro"></p>
+    </div>
+    <div class="cartao">
+      <h2>Documentos com problema de leitura</h2>
+      <div id="erros-docs" class="dica">—</div>
+    </div>
+  </section>
+
+  <!-- ============================== RELATÓRIOS ============================== -->
+  <section class="aba" id="aba-relatorios">
+    <div class="cartao">
+      <h2>Relatórios salvos</h2>
+      <p class="dica" style="margin-top:-6px">Ficam na pasta <code>resultados</code>, ao lado do programa.</p>
+      <div id="relatorios" class="dica">Carregando…</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>O painel funciona só neste computador. Para fechar, use o botão ao lado ou feche a janela preta.</span>
+  <button class="btn perigo" id="encerrar">Encerrar painel</button>
+</footer>
+<div id="mensagem"></div>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let seqLog = 0, rodandoAntes = false, ocorrencias = [], filtroTermo = null, configAlterada = false, ultimoArquivo = null;
+
+async function api(caminho, dados, bruto) {
+  const op = dados === undefined ? {} : {method: "POST", headers: {"X-Painel": "1"},
+    body: bruto ? dados : JSON.stringify(dados)};
+  if (dados !== undefined && !bruto) op.headers["Content-Type"] = "application/json";
+  const r = await fetch(caminho, op);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.erro || ("Erro " + r.status));
+  return j;
+}
+function aviso(texto, ms = 4000) {
+  const m = $("#mensagem"); m.textContent = texto; m.style.display = "block";
+  clearTimeout(aviso.t); aviso.t = setTimeout(() => (m.style.display = "none"), ms);
+}
+
+// ---------------------------------------------------------------- abas
+document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => abrirAba(b.dataset.aba)));
+function abrirAba(nome) {
+  document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("ativa", b.dataset.aba === nome));
+  document.querySelectorAll("section.aba").forEach((s) => s.classList.toggle("ativa", s.id === "aba-" + nome));
+  if (nome === "relatorios") carregarRelatorios();
+}
+
+// ---------------------------------------------------------------- configuração
+function linhaEmpresa(e) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td><input type="checkbox" class="e-ativa" ${e.ativa !== false ? "checked" : ""}></td>
+    <td><input type="text" class="e-nome" value="${esc(e.nome)}"></td>
+    <td><input type="text" class="e-nomes" value="${esc((e.nomes || []).join(", "))}"></td>
+    <td><input type="text" class="e-siglas" value="${esc((e.siglas || []).join(", "))}"></td>
+    <td><button class="btn" title="Remover" style="padding:4px 10px">✕</button></td>`;
+  tr.querySelector("button").addEventListener("click", () => { tr.remove(); marcarAlterada(); });
+  tr.querySelectorAll("input").forEach((i) => i.addEventListener("input", marcarAlterada));
+  return tr;
+}
+function marcarAlterada() { configAlterada = true; $("#salvo-info").textContent = "Alterações não salvas"; }
+
+function preencherConfig(c) {
+  $("#processos").value = c.processos.join("\n");
+  $("#palavras").value = c.palavras_chave.join("\n");
+  const corpo = $("#empresas"); corpo.innerHTML = "";
+  c.empresas.forEach((e) => corpo.appendChild(linhaEmpresa(e)));
+  $("#desde").value = c.desde || ""; $("#ate").value = c.ate || ""; $("#max_paginas").value = c.max_paginas || 10;
+  $("#areas").innerHTML = c.areas.map((a) =>
+    `<label><input type="checkbox" class="area" value="${a.id}" checked> ${esc(a.nome)} <span class="dica">(${a.id})</span></label>`).join("");
+  configAlterada = false; $("#salvo-info").textContent = "";
+}
+function lerConfigDaTela() {
+  const lista = (t) => t.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
+  return {
+    processos: $("#processos").value.split("\n").map((s) => s.trim()).filter(Boolean),
+    palavras_chave: $("#palavras").value.split("\n").map((s) => s.trim()).filter(Boolean),
+    empresas: [...document.querySelectorAll("#empresas tr")].map((tr) => ({
+      ativa: tr.querySelector(".e-ativa").checked, nome: tr.querySelector(".e-nome").value.trim(),
+      nomes: lista(tr.querySelector(".e-nomes").value), siglas: lista(tr.querySelector(".e-siglas").value),
+    })).filter((e) => e.nome),
+    desde: $("#desde").value, ate: $("#ate").value, max_paginas: $("#max_paginas").value,
+  };
+}
+async function salvarConfig(silencioso) {
+  const r = await api("/api/config", lerConfigDaTela());
+  preencherConfig(r.config);
+  $("#salvo-info").textContent = "Salvo às " + new Date().toLocaleTimeString("pt-BR");
+  if (!silencioso) aviso("Configuração salva.");
+}
+$("#processos").addEventListener("input", marcarAlterada);
+$("#palavras").addEventListener("input", marcarAlterada);
+$("#nova-empresa").addEventListener("click", () => {
+  const tr = linhaEmpresa({nome: "", nomes: [], siglas: [], ativa: true});
+  $("#empresas").appendChild(tr); tr.querySelector(".e-nome").focus(); marcarAlterada();
+});
+$("#salvar").addEventListener("click", () => salvarConfig().catch((e) => aviso(e.message)));
+
+// ---------------------------------------------------------------- fonte (online/local) e envio de arquivos
+document.querySelectorAll("input[name=fonte]").forEach((r) => r.addEventListener("change", () => {
+  const local = $("input[name=fonte]:checked").value === "local";
+  $("#opcoes-online").classList.toggle("oculto", local);
+  $("#opcoes-local").classList.toggle("oculto", !local);
+}));
+const soltar = $("#soltar");
+soltar.addEventListener("click", () => $("#arquivo").click());
+soltar.addEventListener("dragover", (e) => { e.preventDefault(); soltar.classList.add("sobre"); });
+soltar.addEventListener("dragleave", () => soltar.classList.remove("sobre"));
+soltar.addEventListener("drop", (e) => { e.preventDefault(); soltar.classList.remove("sobre"); enviar(e.dataTransfer.files); });
+$("#arquivo").addEventListener("change", (e) => enviar(e.target.files));
+async function enviar(arquivos) {
+  let ok = 0;
+  for (const f of arquivos) {
+    try { await api("/api/enviar?nome=" + encodeURIComponent(f.name), await f.arrayBuffer(), true); ok++; }
+    catch (e) { aviso(f.name + ": " + e.message, 6000); }
+  }
+  if (ok) aviso(ok + " arquivo(s) enviado(s).");
+  carregarRelatorios();
+}
+$("#limpar-enviados").addEventListener("click", async () => {
+  try { await api("/api/limpar_enviados", {}); carregarRelatorios(); } catch (e) { aviso(e.message); }
+});
+
+// ---------------------------------------------------------------- executar
+$("#iniciar").addEventListener("click", async () => {
+  try {
+    if (configAlterada || $("#desde").value || $("#ate").value) await salvarConfig(true);
+    const local = $("input[name=fonte]:checked").value === "local";
+    const pasta = $("#pasta").value.trim();
+    await api("/api/iniciar", {
+      comando: local ? "local" : "online",
+      pasta, usar_enviados: local && !pasta,
+      desde: $("#desde").value, ate: $("#ate").value, max_paginas: $("#max_paginas").value,
+      areas: [...document.querySelectorAll(".area:checked")].map((c) => c.value),
+      modo: $("#modo").value, sem_cache: $("#sem_cache").checked, salvar_textos: $("#salvar_textos").checked,
+    });
+    $("#log").innerHTML = ""; $("#final").classList.add("oculto");
+    atualizarStatus();
+  } catch (e) { aviso(e.message, 6000); }
+});
+$("#parar").addEventListener("click", () => api("/api/parar", {}).catch((e) => aviso(e.message)));
+$("#encerrar").addEventListener("click", async () => {
+  if (!confirm("Encerrar o painel? Uma busca em andamento será interrompida.")) return;
+  await api("/api/encerrar", {}).catch(() => {});
+  document.body.innerHTML = '<main><div class="cartao"><h2>Painel encerrado</h2><p>Pode fechar esta aba. Para abrir de novo, ' +
+    'dê dois cliques em <b>iniciar_painel.bat</b>.</p></div></main>';
+});
+
+function formatarTempo(s) {
+  if (s == null) return "–";
+  const m = Math.floor(s / 60), r = s % 60;
+  return m ? `${m}min ${String(r).padStart(2, "0")}s` : `${r}s`;
+}
+const TEXTO_SITUACAO = {
+  concluida: ["ok", "Busca concluída"], cancelada: ["aviso", "Busca interrompida (relatório parcial)"],
+  parcial: ["aviso", "Bloqueada pelo site (relatório parcial)"], bloqueada: ["erro", "Bloqueada pelo site"],
+  erro: ["erro", "Erro"],
+};
+async function atualizarStatus() {
+  let s;
+  try { s = await api("/api/status?desde_log=" + seqLog); }
+  catch (e) { $("#status-texto").textContent = "Sem conexão com o painel"; $("#bolinha").className = "bolinha erro"; return; }
+  const log = $("#log"), noFim = log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
+  for (const l of s.logs) {
+    const div = document.createElement("div"); div.className = l.nivel; div.textContent = l.texto; log.appendChild(div);
+    seqLog = l.seq;
+  }
+  if (noFim) log.scrollTop = log.scrollHeight;
+  $("#iniciar").disabled = s.rodando; $("#parar").disabled = !s.rodando || s.cancelando;
+  const a = s.andamento || {};
+  if (s.rodando) {
+    $("#bolinha").className = "bolinha rodando";
+    $("#status-texto").textContent = s.cancelando ? "Parando…" : "Buscando…";
+    $("#n-reunioes").textContent = a.reunioes ?? 0; $("#n-documentos").textContent = a.documentos ?? 0;
+    $("#n-ocorrencias").textContent = a.ocorrencias ?? 0; $("#n-tempo").textContent = formatarTempo(s.segundos);
+  } else if (s.ultima) {
+    const [classe, texto] = TEXTO_SITUACAO[s.ultima.situacao] || ["", s.ultima.situacao];
+    $("#bolinha").className = "bolinha " + classe; $("#status-texto").textContent = texto + " — " + s.ultima.fim;
+    if (s.ultima.documentos != null) {
+      $("#n-documentos").textContent = s.ultima.documentos; $("#n-ocorrencias").textContent = s.ultima.ocorrencias;
+      $("#n-reunioes").textContent = s.ultima.reunioes ?? 0;
+    }
+    const f = $("#final"); f.classList.remove("oculto");
+    f.innerHTML = s.ultima.arquivo
+      ? `<b>${s.ultima.ocorrencias} ocorrência(s)</b> em ${s.ultima.documentos} documento(s)` +
+        (s.ultima.erros ? ` — ${s.ultima.erros} com problema de leitura` : "") +
+        `. <a href="#" id="ver-res">Ver resultados</a> · <a href="/baixar?arquivo=${encodeURIComponent(s.ultima.arquivo)}">Baixar Excel</a>` +
+        (s.ultima.mensagem ? `<br><span class="dica">${esc(s.ultima.mensagem)}</span>` : "")
+      : `<b>${esc(texto)}:</b> ${esc(s.ultima.mensagem)}`;
+    const ver = $("#ver-res"); if (ver) ver.onclick = (e) => { e.preventDefault(); abrirAba("resultados"); };
+    if (rodandoAntes || (s.ultima.arquivo && s.ultima.arquivo !== ultimoArquivo)) carregarResultados(s.ultima.arquivo);
+  }
+  rodandoAntes = s.rodando;
+  clearTimeout(atualizarStatus.t);
+  atualizarStatus.t = setTimeout(atualizarStatus, s.rodando ? 1000 : 4000);
+}
+
+// ---------------------------------------------------------------- resultados
+async function carregarResultados(arquivo) {
+  ultimoArquivo = arquivo;
+  const r = await api("/api/resultados");
+  ocorrencias = r.ocorrencias; filtroTermo = null;
+  $("#contagem-aba").textContent = ocorrencias.length ? `(${ocorrencias.length})` : "";
+  const be = $("#baixar-excel"); be.disabled = !arquivo;
+  be.onclick = () => (location.href = "/baixar?arquivo=" + encodeURIComponent(arquivo));
+  const erros = r.documentos.filter((d) => d.situacao !== "OK");
+  $("#erros-docs").innerHTML = erros.length
+    ? "<ul>" + erros.map((d) => `<li><b>${esc(d.documento)}</b> (${esc(d.reuniao)}): ${esc(d.situacao)}` +
+        (d.url_documento.startsWith("http") ? ` — <a href="${esc(d.url_documento)}" target="_blank" rel="noopener">abrir</a>` : "") +
+        "</li>").join("") + "</ul>"
+    : "Nenhum.";
+  desenharChips(); desenharTabela();
+}
+function desenharChips() {
+  const cont = {};
+  ocorrencias.forEach((o) => (cont[o.termo] = (cont[o.termo] || 0) + 1));
+  const termos = Object.keys(cont).sort((a, b) => cont[b] - cont[a]);
+  $("#chips").innerHTML = termos.length
+    ? `<button class="chip ${filtroTermo === null ? "ativo" : ""}" data-t="">Todos (${ocorrencias.length})</button>` +
+      termos.map((t) => `<button class="chip ${filtroTermo === t ? "ativo" : ""}" data-t="${esc(t)}">${esc(t)} (${cont[t]})</button>`).join("")
+    : "";
+  document.querySelectorAll("#chips .chip").forEach((c) => c.addEventListener("click", () => {
+    filtroTermo = c.dataset.t || null; desenharChips(); desenharTabela();
+  }));
+}
+function destacar(trecho) { return esc(trecho).replace(/\[\[(.+?)\]\]/g, "<mark>$1</mark>"); }
+function desenharTabela() {
+  const f = $("#filtro").value.trim().toLowerCase();
+  const linhas = ocorrencias.filter((o) => (!filtroTermo || o.termo === filtroTermo) &&
+    (!f || [o.reuniao, o.documento, o.trecho, o.termo, o.item].join(" ").toLowerCase().includes(f)));
+  const corpo = $("#tabela-resultados");
+  if (!ocorrencias.length) { corpo.innerHTML = '<tr><td colspan="4" class="vazio">Nenhuma ocorrência encontrada.</td></tr>'; }
+  else {
+    const mostrar = linhas.slice(0, 1000);
+    corpo.innerHTML = mostrar.map((o) => {
+      const linkDoc = o.url_documento && o.url_documento.startsWith("http")
+        ? `<a href="${esc(o.url_documento)}" target="_blank" rel="noopener">${esc(o.documento)}</a>` : esc(o.documento);
+      const linkReu = o.url_reuniao ? `<a href="${esc(o.url_reuniao)}" target="_blank" rel="noopener">${esc(o.reuniao)}</a>` : esc(o.reuniao);
+      const doc = o.documento === o.reuniao ? "" : `<br><span class="dica">${linkDoc}</span>`;
+      return `<tr><td>${esc(o.data)}</td><td>${linkReu}${doc}</td>
+        <td><b>${esc(o.termo)}</b><br><span class="dica">${esc(o.categoria)}</span></td>
+        <td>${destacar(o.trecho)}${o.item ? `<br><span class="dica">Item: ${esc(o.item)}</span>` : ""}</td></tr>`;
+    }).join("") || '<tr><td colspan="4" class="vazio">Nada corresponde ao filtro.</td></tr>';
+  }
+  $("#info-filtro").textContent = linhas.length > 1000 ? `Mostrando 1000 de ${linhas.length}. Use o Excel para ver todas.` : "";
+}
+$("#filtro").addEventListener("input", desenharTabela);
+
+// ---------------------------------------------------------------- relatórios salvos
+async function carregarRelatorios() {
+  try {
+    const r = await api("/api/relatorios");
+    $("#relatorios").innerHTML = r.relatorios.length
+      ? "<table><thead><tr><th>Arquivo</th><th>Data</th><th>Tamanho</th></tr></thead><tbody>" +
+        r.relatorios.map((x) => `<tr><td><a href="/baixar?arquivo=${encodeURIComponent(x.nome)}">${esc(x.nome)}</a></td>
+          <td>${esc(x.data)}</td><td>${(x.tamanho / 1024).toFixed(0)} KB</td></tr>`).join("") + "</tbody></table>"
+      : "Nenhum relatório ainda.";
+    $("#lista-enviados").textContent = r.enviados.length
+      ? `Arquivos enviados (${r.enviados.length}): ${r.enviados.join(", ")}` : "Nenhum arquivo enviado.";
+  } catch (e) { $("#relatorios").textContent = e.message; }
+}
+
+// ---------------------------------------------------------------- início
+window.addEventListener("beforeunload", (e) => { if (configAlterada) { e.preventDefault(); e.returnValue = ""; } });
+api("/api/config").then(preencherConfig).catch((e) => aviso("Erro ao ler a configuração: " + e.message, 8000));
+carregarRelatorios();
+atualizarStatus();
+</script>
+</body>
+</html>

@@ -17,6 +17,10 @@ from .site_aneel import Reuniao, ler_detalhe, ler_listagem, url_listagem
 log = logging.getLogger(__name__)
 
 
+class BuscaCancelada(Exception):
+    """A busca foi interrompida a pedido do usuário."""
+
+
 @dataclass
 class Resultado:
     ocorrencias: list[LinhaOcorrencia] = field(default_factory=list)
@@ -24,12 +28,18 @@ class Resultado:
 
 
 class Varredura:
-    def __init__(self, buscador: Buscador, pasta_textos: Path | None = None):
+    def __init__(self, buscador: Buscador, pasta_textos: Path | None = None, cancelar=None):
+        """cancelar: objeto com is_set() (ex.: threading.Event) para interromper a varredura."""
         self.buscador = buscador
         self.pasta_textos = pasta_textos
+        self.cancelar = cancelar
         self.resultado = Resultado()
         if pasta_textos:
             pasta_textos.mkdir(parents=True, exist_ok=True)
+
+    def _verificar_cancelamento(self) -> None:
+        if self.cancelar is not None and self.cancelar.is_set():
+            raise BuscaCancelada("Busca interrompida pelo usuário")
 
     # ------------------------------------------------------------------ registro
     def analisar_texto(self, texto: str, *, data: str, area: str, reuniao: str, url_reuniao: str,
@@ -66,6 +76,7 @@ class Varredura:
             log.info("=== Área %s — %s ===", id_area, nome_area)
             url = url_listagem(int(id_area), 1)
             for pagina in range(1, max_paginas + 1):
+                self._verificar_cancelamento()
                 resposta = cliente.obter(url, usar_cache=False)  # listagem muda toda semana
                 listagem = ler_listagem(resposta.conteudo, resposta.url)
                 if not listagem.reunioes:
@@ -78,6 +89,7 @@ class Varredura:
                         continue
                     if reuniao.data and ate and reuniao.data > ate:
                         continue
+                    self._verificar_cancelamento()
                     self._processar_reuniao(cliente, reuniao, str(nome_area))
                 if passou_do_periodo or not listagem.proxima_pagina:
                     break
@@ -103,6 +115,7 @@ class Varredura:
                                 url_documento=reuniao.url, tipo="html", **base)
         log.info("    página da reunião: %d ocorrência(s); %d anexo(s)", n, len(detalhe.anexos))
         for nome, url_anexo in detalhe.anexos:
+            self._verificar_cancelamento()
             try:
                 r = cliente.obter(url_anexo, usar_cache=usar_cache)
                 if r.status >= 400:
@@ -123,6 +136,7 @@ class Varredura:
         if not arquivos:
             log.warning("Nenhum documento (.pdf, .html, .docx…) encontrado em %s", pasta)
         for caminho in arquivos:
+            self._verificar_cancelamento()
             if "_files" in caminho.parent.name or "_arquivos" in caminho.parent.name:
                 continue  # recursos auxiliares salvos pelo navegador
             relativo = str(caminho.relative_to(pasta))

@@ -23,7 +23,23 @@ o trecho onde o termo aparece e os links. Também são gerados CSVs.
 > os downloads por dentro dessa janela. A sessão fica salva em `.perfil_navegador/`, então nas execuções
 > seguintes a verificação normalmente não aparece de novo.
 
-## Instalação (Windows)
+## Jeito mais fácil: o painel (Windows)
+
+1. Instale o Python 3.10 ou superior em <https://www.python.org/downloads/> e marque **"Add python.exe to PATH"**.
+2. Dê **dois cliques em `iniciar_painel.bat`**, dentro desta pasta.
+   - Na primeira vez, ele prepara tudo sozinho, o que leva alguns minutos.
+   - Depois, abre o painel no navegador (`http://127.0.0.1:8765`).
+3. No painel:
+   - **2. O que procurar:** cole os números de processo e as palavras-chave, revise as empresas e clique em **Salvar**.
+   - **1. Buscar:** escolha o período e clique em **Iniciar busca**. Se o Chrome abrir pedindo verificação, aguarde ou clique na caixa e não feche a janela.
+   - **3. Resultados:** veja as ocorrências com o trecho destacado, filtre por termo e clique em **Baixar Excel**.
+   - Para buscar em PDFs que você já tem, escolha **"Em arquivos do meu computador"** e arraste os arquivos.
+4. Para fechar, clique em **Encerrar painel** ou feche a janela preta.
+
+O painel funciona só no seu computador e não fica acessível a outras pessoas da rede.
+No Linux ou macOS, use `./iniciar_painel.sh`.
+
+## Instalação manual (linha de comando)
 
 1. Instale o Python 3.10 ou superior em <https://www.python.org/downloads/> e marque **"Add Python to PATH"**.
 2. Abra o **Prompt de Comando** na pasta `busca_reunioes_aneel` e rode:
@@ -111,10 +127,15 @@ Os testes usam páginas reais de listagem salvas do site (`tests/fixtures/`) e s
 
 ```
 busca_reunioes_aneel/
+├── iniciar_painel.bat       ← dois cliques para abrir o painel (Windows)
+├── iniciar_painel.sh        ← idem para Linux/macOS
 ├── config.yaml              ← termos de busca e período
 ├── requirements.txt
 ├── aneel_busca/
 │   ├── __main__.py          ← linha de comando
+│   ├── painel.py            ← servidor local do painel
+│   ├── web/painel.html      ← página do painel
+│   ├── executor.py          ← execução de uma busca completa (usada pelo painel e pela linha de comando)
 │   ├── site_aneel.py        ← leitura das listagens e páginas das reuniões
 │   ├── cliente.py           ← downloads (cache, novas tentativas, Cloudflare/navegador)
 │   ├── extracao.py          ← texto de PDF, DOCX, XLSX, HTML, RTF, ZIP

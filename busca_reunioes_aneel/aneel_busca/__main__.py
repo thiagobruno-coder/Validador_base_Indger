@@ -1,6 +1,7 @@
 """Linha de comando.
 
 Exemplos:
+    python -m aneel_busca painel
     python -m aneel_busca online
     python -m aneel_busca online --desde 2026-06-01 --areas 425
     python -m aneel_busca local pasta_com_pdfs
@@ -11,35 +12,18 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from datetime import date, datetime
 from pathlib import Path
 
-import yaml
-
-from .busca import Buscador
-from .cliente import BloqueioCloudflare, Cache, Cliente
-from .processamento import Varredura
-from .relatorio import COLUNAS_DOCUMENTOS, COLUNAS_OCORRENCIAS, gravar_csv, gravar_excel
+from .executor import ErroConfiguracao, carregar_config, executar, ler_data
 
 log = logging.getLogger("aneel_busca")
 
 
-def _data(valor: str | None) -> date | None:
-    if not valor:
-        return None
-    for formato in ("%Y-%m-%d", "%d/%m/%Y"):
-        try:
-            return datetime.strptime(str(valor), formato).date()
-        except ValueError:
-            continue
-    raise argparse.ArgumentTypeError(f"Data inválida: {valor} (use AAAA-MM-DD ou DD/MM/AAAA)")
-
-
-def carregar_config(caminho: Path) -> dict:
-    if not caminho.exists():
-        sys.exit(f"Arquivo de configuração não encontrado: {caminho}")
-    with caminho.open(encoding="utf-8") as arquivo:
-        return yaml.safe_load(arquivo) or {}
+def _data(valor: str | None):
+    try:
+        return ler_data(valor)
+    except ErroConfiguracao as erro:
+        raise argparse.ArgumentTypeError(str(erro)) from erro
 
 
 def montar_parser() -> argparse.ArgumentParser:
@@ -52,6 +36,10 @@ def montar_parser() -> argparse.ArgumentParser:
                         help="salva o texto extraído de cada documento (útil para conferência)")
     parser.add_argument("-v", "--verbose", action="store_true", help="mostra mensagens detalhadas")
     sub = parser.add_subparsers(dest="comando", required=True)
+
+    painel = sub.add_parser("painel", help="abre o painel no navegador (interface gráfica)")
+    painel.add_argument("--porta", type=int, default=8765, help="porta local do painel")
+    painel.add_argument("--nao-abrir", action="store_true", help="não abre o navegador automaticamente")
 
     online = sub.add_parser("online", help="baixa as reuniões do site da ANEEL e faz a busca")
     online.add_argument("--areas", nargs="+", help="idAreaNoticia a varrer (padrão: os do config)")
@@ -75,48 +63,28 @@ def main(argv: list[str] | None = None) -> int:
     for ruidoso in ("pypdf", "urllib3"):
         logging.getLogger(ruidoso).setLevel(logging.ERROR)
 
-    config = carregar_config(args.config)
-    buscador = Buscador.de_config(config)
-    if not buscador.termos:
-        sys.exit("Nenhum termo de busca configurado (processos, empresas ou palavras_chave) no config.")
-    log.info("%d termo(s) de busca carregado(s)", len(buscador.termos))
+    if args.comando == "painel":
+        from .painel import iniciar_painel
 
-    args.saida.mkdir(parents=True, exist_ok=True)
-    carimbo = datetime.now().strftime("%Y%m%d_%H%M%S")
-    varredura = Varredura(buscador, args.saida / f"textos_{carimbo}" if args.salvar_textos else None)
+        return iniciar_painel(args.config, args.saida, porta=args.porta, abrir_navegador=not args.nao_abrir)
 
     try:
+        config = carregar_config(args.config)
         if args.comando == "online":
-            areas = config.get("areas") or {425: "Pautas e Atas", 424: "Distribuição de Processos"}
-            if args.areas:
-                areas = {int(a): areas.get(int(a), f"Área {a}") for a in args.areas}
-            cache = Cache(None if args.sem_cache else Path(".cache_aneel"))
-            with Cliente(modo=args.modo, cache=cache, headless=args.headless,
-                         intervalo=float(config.get("intervalo_requisicoes") or 1.5)) as cliente:
-                varredura.varrer_online(
-                    cliente, areas,
-                    desde=args.desde or _data(config.get("desde")),
-                    ate=args.ate or _data(config.get("ate")),
-                    max_paginas=args.max_paginas or int(config.get("max_paginas") or 10),
-                )
+            execucao = executar(config, comando="online", saida=args.saida, areas=args.areas, desde=args.desde,
+                                ate=args.ate, max_paginas=args.max_paginas, modo=args.modo,
+                                headless=args.headless, sem_cache=args.sem_cache,
+                                salvar_textos=args.salvar_textos)
         else:
-            if not args.pasta.is_dir():
-                sys.exit(f"Pasta não encontrada: {args.pasta}")
-            varredura.varrer_pasta(args.pasta)
-    except BloqueioCloudflare as erro:
-        log.error("%s", erro)
-        if not varredura.resultado.documentos:
-            return 2
-        log.warning("Gerando relatório parcial com o que foi lido até aqui.")
-    except KeyboardInterrupt:
-        log.warning("Interrompido pelo usuário; gerando relatório parcial.")
+            execucao = executar(config, comando="local", saida=args.saida, pasta=args.pasta,
+                                salvar_textos=args.salvar_textos)
+    except ErroConfiguracao as erro:
+        sys.exit(str(erro))
 
-    resultado = varredura.resultado
-    xlsx = args.saida / f"busca_aneel_{carimbo}.xlsx"
-    gravar_excel(xlsx, resultado.ocorrencias, resultado.documentos)
-    gravar_csv(args.saida / f"ocorrencias_{carimbo}.csv", resultado.ocorrencias, COLUNAS_OCORRENCIAS)
-    gravar_csv(args.saida / f"documentos_{carimbo}.csv", resultado.documentos, COLUNAS_DOCUMENTOS)
+    if execucao.xlsx is None:
+        return 2
 
+    resultado = execucao.resultado
     erros = sum(1 for d in resultado.documentos if d.situacao != "OK")
     print()
     print(f"Documentos analisados: {len(resultado.documentos)} (com erro: {erros})")
@@ -128,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"      - {r}")
         if len(reunioes) > 5:
             print(f"      … e mais {len(reunioes) - 5}")
-    print(f"\nRelatório: {xlsx.resolve()}")
+    print(f"\nRelatório: {execucao.xlsx.resolve()}")
     return 0
 
 
