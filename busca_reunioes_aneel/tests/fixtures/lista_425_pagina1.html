@@ -1,0 +1,355 @@
+
+<!-- saved from url=(0077)https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/?idAreaNoticia=425 -->
+<html lang="pt-br"><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><script src="./___ ANEEL - Memória de Reuniões Públicas ____files/jquery-1.11.3.min.js.baixados"></script>
+<link rel="stylesheet" type="text/css" media="screen" href="./___ ANEEL - Memória de Reuniões Públicas ____files/bootstrap.min.css">
+<link rel="stylesheet" type="text/css" media="screen" href="./___ ANEEL - Memória de Reuniões Públicas ____files/bootstrap-responsive.min.css">
+
+
+
+
+
+
+	<title>*** ANEEL - Memória de Reuniões Públicas ***</title>
+<style>
+	body {font-size:14px;font-family: "Arial";}
+	td {font-size:14px;font-family: "Arial";}
+</style></head>
+
+<body>
+
+
+
+
+<script>
+//função para validar formulário de pesquisa
+function validaPesquisa(f){
+	if((f.txtPesq.value != '') && (f.txtPesq.value.length < 3)){
+		alert("A palavra para pesquisa deverá conter no mínimo 3 caracteres.");
+		f.txtPesq.select();
+		return false;
+	}
+	if(f.mesPesq.value != ''){
+		if(f.anoPesq.value == ''){
+			alert("Para a pesquisa por mês será necessário escolher um ano.");
+			f.anoPesq.focus();
+			return false;
+		}
+	}
+		
+	return true;
+}
+</script>
+
+<noscript>
+	Funções para validação do envio de informações do formulário de busca.
+</noscript> 
+<style>
+	body {font-size:14px;font-family: "Arial";}
+	td {font-size:14px;font-family: "Arial";}
+	.lista-noticias .textos .titulo a, .titulo_noticias, .lista-documentos .textos .titulo a {
+	  color: #172938;
+	  font-size: 14px;
+	  line-height: normal;
+	  font-weight: bold;
+	  font-family: Arial, Helvetica, sans-serif;
+	}
+	.lista-noticias, .lista-documentos {
+	  border-bottom: solid 1px #ddd;
+	  padding: 10px 15px;
+	  display: inline-block;
+	  width: 100%;
+	}
+</style>
+
+
+
+
+<script>
+//função para validar formulário de pesquisa
+function validaPesquisa(f){
+	if((f.txtPesq.value != '') && (f.txtPesq.value.length < 3)){
+		alert("A palavra para pesquisa deverá conter no mínimo 3 caracteres.");
+		f.txtPesq.select();
+		return false;
+	}
+	if(f.mesPesq.value != ''){
+		if(f.anoPesq.value == ''){
+			alert("Para a pesquisa por mês será necessário escolher um ano.");
+			f.anoPesq.focus();
+			return false;
+		}
+	}
+		
+	return true;
+}
+</script>
+
+<noscript>
+	Funções para validação do envio de informações do formulário de busca.
+</noscript> 
+<br><br>
+
+
+
+
+
+<table border="0" align="center" width="700">
+
+<form name="frmPesquisa" action="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_listarNoticias.cfm?idAreaNoticia=425&amp;c=0&amp;idarea=425" method="post" onsubmit="return validaPesquisa(this);"></form>
+<tbody><tr>
+	<td>Texto a procurar:</td>
+	<td><input type="Text" name="txtPesq" size="30"></td>
+	<td>&nbsp;no período:</td>
+	<td colspan="2">
+	<select name="mesPesq">
+		<option value="">-
+		</option><option value="01">Janeiro
+		</option><option value="02">Fevereiro
+		</option><option value="03">Março
+		</option><option value="04">Abril
+		</option><option value="05">Maio
+		</option><option value="06">Junho
+		</option><option value="07">Julho
+		</option><option value="08">Agosto
+		</option><option value="09">Setembro
+		</option><option value="10">Outubro
+		</option><option value="11">Novembro
+		</option><option value="12">Dezembro
+	</option></select>&nbsp;
+	<select name="anoPesq">
+		<option value="">-
+		
+		</option><option value="1998">1998 
+		</option><option value="1999">1999 
+		</option><option value="2000">2000 
+		</option><option value="2001">2001 
+		</option><option value="2002">2002 
+		</option><option value="2003">2003 
+		</option><option value="2004">2004 
+		</option><option value="2005">2005 
+		</option><option value="2006">2006 
+		</option><option value="2007">2007 
+		</option><option value="2008">2008 
+		</option><option value="2009">2009 
+		</option><option value="2010">2010 
+		</option><option value="2011">2011 
+		</option><option value="2012">2012 
+		</option><option value="2013">2013 
+		</option><option value="2014">2014 
+		</option><option value="2015">2015 
+		</option><option value="2016">2016 
+		</option><option value="2017">2017 
+		</option><option value="2018">2018 
+		</option><option value="2019">2019 
+		</option><option value="2020">2020 
+		</option><option value="2021">2021 
+		</option><option value="2022">2022 
+		</option><option value="2023">2023 
+		</option><option value="2024">2024 
+		</option><option value="2025">2025 
+		</option><option value="2026">2026 
+	</option></select>
+	</td>
+	<td><input type="submit" value="Pesquisar" class="btn"></td>
+</tr>
+
+</tbody></table>
+<br>
+
+
+<br>
+
+<table border="0" align="center" class="">
+
+	<tbody><tr>
+	<td>
+		<p><span class="icon-calendar"></span>06/10/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14817&amp;idAreaNoticia=425">PAUTA/ATA DA 20ª REUNIÃO PÚBLICA ORDINÁRIA DA DIRETORIA DE 2026 (PRÉVIA)                                                                                                                                                                                       </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>29/09/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14814&amp;idAreaNoticia=425">PAUTAATA DO 17º CIRCUITO DELIBERATIVO PÚBLICO ORDINÁRIO DA DIRETORIA DE 2026.                                                                                                                                                                                  </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>22/09/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14810&amp;idAreaNoticia=425">PAUTA\ATA DA 19ª REUNIÃO PÚBLICA ORDINÁRIA DA DIRETORIA DE 2026                                                                                                                                                                                                </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>15/09/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14807&amp;idAreaNoticia=425">PAUTA/ATA DO 16º CIRCUITO DELIBERATIVO PÚBLICO ORDINÁRIO DA DIRETORIA DE 2026                                                                                                                                                                                  </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>08/09/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14804&amp;idAreaNoticia=425">PAUTA/ATA DA 18ª REUNIÃO PÚBLICA ORDINÁRIA DA DIRETORIA DE 2026                                                                                                                                                                                                </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>01/09/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14801&amp;idAreaNoticia=425">PAUTA/ATA DO 15º CIRCUITO DELIBERATIVO PÚBLICO ORDINÁRIO DA DIRETORIA DE 2026                                                                                                                                                                                  </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>24/08/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14797&amp;idAreaNoticia=425">PAUTA\ATA DA 17ª REUNIÃO PÚBLICA ORDINÁRIA DA DIRETORIA DE 2026                                                                                                                                                                                                </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>18/08/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14793&amp;idAreaNoticia=425">PAUTA\ATA DO 14° CIRCUITO DELIBERATIVO PÚBLICO ORDINÁRIO DA DIRETORIA DE 2026                                                                                                                                                                                  </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>11/08/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14790&amp;idAreaNoticia=425">PAUTA\ATA DA 16ª REUNIÃO PÚBLICA ORDINÁRIA DA DIRETORIA DE 2026                                                                                                                                                                                                </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>04/08/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14787&amp;idAreaNoticia=425">PAUTA/ATA DO 13º CIRCUITO DELIBERATIVO PÚBLICO ORDINÁRIO DA DIRETORIA DE 2026                                                                                                                                                                                  </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>28/07/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14784&amp;idAreaNoticia=425">PAUTA/ATA DA 15ª REUNIÃO PÚBLICA ORDINÁRIA DA DIRETORIA DE 2026                                                                                                                                                                                                </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>21/07/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14781&amp;idAreaNoticia=425">PAUTA/ATA DO 12º CIRCUITO DELIBERATIVO PÚBLICO ORDINÁRIO DA DIRETORIA DE 2026                                                                                                                                                                                  </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>14/07/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14778&amp;idAreaNoticia=425">PAUTA/ATA DA 14ª REUNIÃO PÚBLICA ORDINÁRIA DA DIRETORIA DE 2026                                                                                                                                                                                                </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>07/07/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14775&amp;idAreaNoticia=425">PAUTA/ATA DO 11º CIRCUITO DELIBERATIVO PÚBLICO ORDINÁRIO DA DIRETORIA DE 2026                                                                                                                                                                                  </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+	<tr>
+	<td>
+		<p><span class="icon-calendar"></span>30/06/2026
+	</p></td>
+	<td>
+		<div class="lista-noticias">
+		<a class="titulo_noticias" href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_detalheNoticia.cfm?idNoticia=14772&amp;idAreaNoticia=425">PAUTA\ATA DA 13ª REUNIÃO PÚBLICA ORDINÁRIA DA DIRETORIA DE 2026                                                                                                                                                                                                </a><p></p>
+		</div>
+	</td>
+</tr>
+	
+
+</tbody></table>
+	<br>
+
+
+	
+	<p>
+		<table border="0" align="center">
+		<tbody><tr id="menu">
+			<td align="left">
+			
+			</td>
+			<td align="right">
+			
+			<a href="https://www2.aneel.gov.br/aplicacoes_liferay/noticias_area/dsp_listarNoticias.cfm?idAreaNoticia=425&amp;idarea=425&amp;page=2&amp;txtPesq=&amp;anoPesq=&amp;mesPesq=">Próximas 15  &gt;&gt;</a>
+			
+			</td>
+		</tr>
+		</tbody></table>
+	</p>
+
+	
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a46cff01f816d868',t:'MTc5MTM3NzA1NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><iframe height="1" width="1" style="position: absolute; top: 0px; left: 0px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; visibility: hidden;" src="./___ ANEEL - Memória de Reuniões Públicas ____files/saved_resource.html"></iframe><script type="module" src="./___ ANEEL - Memória de Reuniões Públicas ____files/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;2d3923695cd14d13bf5c35c224b971df&quot;,&quot;spa&quot;:2}" crossorigin="anonymous"></script>
+
+
+	
+</body></html>
